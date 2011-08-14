@@ -6,10 +6,10 @@ _boost := /usr/lib/boost_1_44_0
 all : websock md5
 
 websock : ${_websock} md5
-	g++ -O2 -I${_boost} ${_websock} -c
+	g++ -O2 -I${_boost} WebSocket.cpp -c
 
 md5 : ${_md5}
-	g++ ${_md5} -c
+	g++ md5/md5.cpp -c
 
 clean :
 	rm -rf *.o
