@@ -1,20 +1,39 @@
 #include <string>
+#include <iostream>
+#include <boost/algorithm/string/trim.hpp>
+
 #include "md5/md5.h"
+#include "WebSocket.h"
 
 void WebSocket::_handshake( const std::string& header )
 {
+	// the last 8 bytes is easy peasy
+	_l8b = header.substr( header.length( ) - 8 );
 	
+	// get key 1
+	size_t pos = header.find( "Sec-WebSocket-Key1" );
+	_key1 = header.substr( header.find( ':', pos ), header.find( '\n', pos ) );
+	boost::algorithm::trim( _key1 );
+	
+	// get key2
+	pos = header.find( "Sec-WebSocket-Key2" );
+	_key2 = header.substr( header.find( ':', pos ), header.find( '\n', pos ) );
+	boost::algorithm::trim( _key2 );
+	
+	// @TODO - get the rest of the fields
+	
+	std::string secret = _genSecret( );
 }
 
 std::string WebSocket::_genSecret( )
 {
 	int k1 = _extractKey( _key1 );
-	int k2 = _extrackKey( _key2 );
+	int k2 = _extractKey( _key2 );
 	
 	return md5( _getBigEndRep( k1 ) + _getBigEndRep( k2 ) + _l8b, true );
 }
 
-int Websocket::_extractKey( const std::string& token )
+int WebSocket::_extractKey( const std::string& token )
 {
 	unsigned int spaceCount = 0;
 	unsigned int res = 0;
