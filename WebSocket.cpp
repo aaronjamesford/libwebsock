@@ -18,6 +18,10 @@ void WebSocket::_handshake( const std::string& header )
 	_origin = _getField( header, "Origin" );
 	boost::algorithm::trim( _origin );
 	
+	// protocol
+	_protocol = _getField( header, "Sec-WebSocket-Protocol" );
+	boost::algorithm::trim( _protocol );
+	
 	// TODO : Probably add some more
 	
 	// get key 1
@@ -31,9 +35,23 @@ void WebSocket::_handshake( const std::string& header )
 	// the last 8 bytes is easy peasy
 	_l8b = header.substr( header.length( ) - 8 );
 	
-	// @TODO - get the rest of the fields
+	// TODO : validate all the fields gathered so far
 	
+	// get the secret :)
 	std::string secret = _genSecret( );
+	
+	// construct the response
+	// probably needs some more validation as some of these are optional and some may depend on static values
+	std::string response = "HTTP/1.1 101 WebSocket Protocol Handshake\r\n";
+	response += "Upgrade: WebSocket\r\nConnection: Upgrade\r\n";
+	response += "Sec-WebSocket-Origin: " + _origin + "\r\n";
+	response += "Sec-WebSocket-Location: ws://" + _host + _path + "\r\n";
+	response += "Sec-WebSocket-Protocol: " + _protocol + "\r\n";
+	response += 0x0D;
+	response += 0x0A;
+	response += secret;
+	
+	// TODO : send the response once the send method is implemented;
 }
 
 std::string WebSocket::_getField( const std::string& header, const std::string& field )
