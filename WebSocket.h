@@ -40,6 +40,7 @@ namespace WebSocket
 		boost::asio::io_service& _io_service;
 		
 		int _port;
+		int _maxBytes;
 	
 		std::vector< User > _users;
 		
@@ -54,11 +55,15 @@ namespace WebSocket
 		
 		void _handleAccept( sock_ptr sock, const boost::system::error_code& error );
 	
-		void _handshake( const std::string& header );
+		void _handshake( User& u, const std::string& header );
 		std::string _getField( const std::string& header, const std::string& field );
 		std::string _genSecret( );
 		int _extractKey( const std::string& token );
 		std::string _getBigEndRep( int x );
+		
+		void _process( User& u, const std::string& req );
+		
+		void _send( sock_ptr sock, const std::string& resp );
 	};
 
 }

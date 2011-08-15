@@ -13,7 +13,7 @@ namespace WebSocket
 {
 
 	WebSocket::WebSocket( boost::asio::io_service& io_service )
-	 : _io_service( io_service )
+	 : _io_service( io_service ), _maxBytes( 2048 )
 	{
 		
 	}
@@ -36,6 +36,31 @@ namespace WebSocket
 			_io_service.run( );
 			
 			// read shit, determine validity, process
+			std::vector< User >::iterator it = _users.begin( );
+			while( it != _users.end( ) )
+			{
+				boost::system::error_code error;
+				std::string req;
+				it->sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
+				if( error == boost::asio::error::eof )
+				{
+					it->sock->close( );
+					it = _users.erase( it );
+				}
+				else
+				{
+					if( it->handshaken )
+					{ // process the actual request
+						
+					}
+					else
+					{ // needs to handshake
+						_handshake( *it, req );
+					}
+				}
+				
+				++it;
+			}
 		}
 	}
 	
@@ -52,7 +77,7 @@ namespace WebSocket
 		}
 	}
 
-	void WebSocket::_handshake( const std::string& header )
+	void WebSocket::_handshake( User& u, const std::string& header )
 	{
 		// the request - i.e. "GET /uobnfsjldf HTTP1.1/1" or whatever the fuck it is
 		_req = header.substr( 0, header.find( '\n' ) );
@@ -98,9 +123,11 @@ namespace WebSocket
 		response += 0x0A;
 		response += secret;
 		
-		std::cout << response << std::endl;
+		// std::cout << response << std::endl;
 		
 		// TODO : send the response once the send method is implemented;
+		
+		u.handshaken = true;
 	}
 
 	std::string WebSocket::_getField( const std::string& header, const std::string& field )
@@ -189,4 +216,13 @@ namespace WebSocket
 		return res;
 	}
 
+	void WebSocket::_process( User& u, const std::string& req )
+	{
+		_send( u.sock, req );
+	}
+	
+	void WebSocket::_send( sock_ptr sock, const std::string& resp )
+	{
+		sock->send( boost::asio::buffer( resp, _maxBytes ) );
+	}
 }
