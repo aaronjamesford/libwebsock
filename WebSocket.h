@@ -2,12 +2,18 @@
 #define WEBSOCKET_H
 
 #include <string>
+// #include <boost/asio.hpp>
+
+// using boost::asio::ip::tcp;
 
 class WebSocket
 {
 public:
+	WebSocket();
 	WebSocket( int port );
 	~WebSocket( );
+		
+	void start( );
 private:
 	int _port;
 	

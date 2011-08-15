@@ -51,6 +51,8 @@ void WebSocket::_handshake( const std::string& header )
 	response += 0x0A;
 	response += secret;
 	
+	std::cout << response << std::endl;
+	
 	// TODO : send the response once the send method is implemented;
 }
 
@@ -65,10 +67,10 @@ std::string WebSocket::_getField( const std::string& header, const std::string& 
 		colon = header.find( ':', start );
 		if( colon != std::string::npos )
 		{
-			newline = header.find( '\n', colon );
+			newline = header.find_first_of( "\r\n", colon );
 			if( newline != std::string::npos )
 			{
-				return header.substr( colon + 1, newline );
+				return header.substr( colon + 1, (newline - colon) - 1 );
 			}
 		}
 	}
@@ -117,7 +119,7 @@ int WebSocket::_extractKey( const std::string& token )
 	return res / spaceCount;
 }
 
-std::string _getBigEndRep( unsigned int x )
+std::string WebSocket::_getBigEndRep( int x )
 {
 	int test = 1;
 	char* endian = (char*)&test;
@@ -125,9 +127,9 @@ std::string _getBigEndRep( unsigned int x )
 	if( endian[ 0 ] )
 	{ // little endian
 		x = (x>>24) | 
-        ((x<<8) & 0x00FF0000) |
-        ((x>>8) & 0x0000FF00) |
-        (x<<24);
+			((x<<8) & 0x00FF0000) |
+			((x>>8) & 0x0000FF00) |
+			(x<<24);
 	}
 	
 	unsigned char* r = (unsigned char*)&x;
