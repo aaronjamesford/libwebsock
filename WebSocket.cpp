@@ -12,69 +12,85 @@
 namespace WebSocket
 {
 
-	WebSocket::WebSocket( boost::asio::io_service& io_service )
-	 : _io_service( io_service ), _maxBytes( 2048 )
+	WebSocket::WebSocket( boost::asio::io_service& io_service, int port )
+	 : _io_service( io_service ), _port( port ), _maxBytes( 2048 )
 	{
 		
 	}
 	
 	void WebSocket::start( )
 	{
-		tcp::acceptor server_sock( _io_service );
+		_server_sock = accept_ptr( new tcp::acceptor( _io_service ) );
 		tcp::endpoint ep( tcp::v4( ), _port );
 		
 		// open the socket, set it to non blocking and bind the socket
-		server_sock.open( ep.protocol( ) );
+		_server_sock->open( ep.protocol( ) );
 		// server_sock.set_option( boost::asio::socket_base::non_blocking_io( true ) );
-		server_sock.bind( ep );
-				
-		while( true )
-		{
-			// accept the socket, if it actually accepted, add the socket to the list
-			sock_ptr sock( new tcp::socket( _io_service ) );
-			server_sock.async_accept( *sock, boost::bind( &WebSocket::_handleAccept, this, sock, _1 ) );
-			_io_service.run( );
-			
-			// read shit, determine validity, process
-			std::vector< User >::iterator it = _users.begin( );
-			while( it != _users.end( ) )
-			{
-				boost::system::error_code error;
-				std::string req;
-				it->sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
-				if( error == boost::asio::error::eof )
-				{
-					it->sock->close( );
-					it = _users.erase( it );
-				}
-				else
-				{
-					if( it->handshaken )
-					{ // process the actual request
-						process( *it, req );
-					}
-					else
-					{ // needs to handshake
-						_handshake( *it, req );
-					}
-				}
-				
-				++it;
-			}
-		}
+		_server_sock->bind( ep );
+		_server_sock->listen( );
+		
+		_accept( );
 	}
 	
 	void WebSocket::_handleAccept( sock_ptr sock, const boost::system::error_code& error )
 	{
+		std::cout << "Errr" << std::endl;
 		if( !error )
 		{
+			std::cout << "connection :)\n\n\n\n";
 			// create a new user and add it to the list
 			User u;
 			tcp::socket::non_blocking_io command( true );
 			sock->io_control( command );
 			u.sock = sock;
 			_users.push_back( u );
+			
+			_read( );
+			_accept( );
 		}
+	}
+	
+	void WebSocket::_read( )
+	{
+		// read shit, determine validity, process
+		std::vector< User >::iterator it = _users.begin( );
+		while( it != _users.end( ) )
+		{
+			// std::cout << "Hello" << std::endl;
+			boost::system::error_code error;
+			std::string req;
+			size_t bytes = it->sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
+			if( error == boost::asio::error::eof )
+			{
+				it->sock->close( );
+				it = _users.erase( it );
+			}
+			else if( !error && bytes > 0 )
+			{
+				std::cout << "Recieved: \n" << req << std::endl << std::endl;
+				if( it->handshaken )
+				{ // process the actual request
+					_process( *it, req );
+				}
+				else
+				{ // needs to handshake
+					_handshake( *it, req );
+				}
+			}
+			else if( error )
+			{
+				throw error;
+			}
+			
+			++it;
+		}
+	}
+	
+	void WebSocket::_accept( )
+	{
+			// accept the socket, if it actually accepted, add the socket to the list
+			sock_ptr sock( new tcp::socket( _io_service ) );
+			_server_sock->async_accept( *sock, boost::bind( &WebSocket::_handleAccept, this, sock, _1 ) );
 	}
 
 	void WebSocket::_handshake( User& u, const std::string& header )

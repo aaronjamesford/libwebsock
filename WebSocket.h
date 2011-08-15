@@ -31,13 +31,13 @@ namespace WebSocket
 	class WebSocket
 	{
 	public:
-		WebSocket( boost::asio::io_service& io_service );
-		WebSocket( int port );
-		~WebSocket( );
+		WebSocket( boost::asio::io_service& io_service, int port );
+		~WebSocket( ) { };
 			
 		void start( );
 	private:
 		boost::asio::io_service& _io_service;
+		accept_ptr _server_sock;
 		
 		int _port;
 		int _maxBytes;
@@ -54,6 +54,8 @@ namespace WebSocket
 		std::string _path;
 		
 		void _handleAccept( sock_ptr sock, const boost::system::error_code& error );
+		void _read( );
+		void _accept( );
 	
 		void _handshake( User& u, const std::string& header );
 		std::string _getField( const std::string& header, const std::string& field );
