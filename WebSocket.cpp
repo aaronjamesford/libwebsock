@@ -4,6 +4,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 #include "md5/md5.h"
 #include "WebSocket.h"
@@ -30,7 +31,24 @@ namespace WebSocket
 		while( true )
 		{
 			// accept the socket, if it actually accepted, add the socket to the list
+			sock_ptr sock( new tcp::socket( _io_service ) );
+			server_sock.async_accept( *sock, boost::bind( &WebSocket::_handleAccept, this, sock, _1 ) );
+			_io_service.run( );
+			
 			// read shit, determine validity, process
+		}
+	}
+	
+	void WebSocket::_handleAccept( sock_ptr sock, const boost::system::error_code& error )
+	{
+		if( !error )
+		{
+			// create a new user and add it to the list
+			User u;
+			tcp::socket::non_blocking_io command( true );
+			sock->io_control( command );
+			u.sock = sock;
+			_users.push_back( u );
 		}
 	}
 
