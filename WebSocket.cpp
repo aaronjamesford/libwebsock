@@ -51,7 +51,7 @@ namespace WebSocket
 				{
 					if( it->handshaken )
 					{ // process the actual request
-						
+						process( *it, req );
 					}
 					else
 					{ // needs to handshake
@@ -125,7 +125,7 @@ namespace WebSocket
 		
 		// std::cout << response << std::endl;
 		
-		// TODO : send the response once the send method is implemented;
+		_send( u.sock, response );
 		
 		u.handshaken = true;
 	}
