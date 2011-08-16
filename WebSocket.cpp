@@ -74,13 +74,15 @@ namespace WebSocket
 				}
 				else if( !error && bytes > 0 )
 				{
-					std::string r( req + 1 );
-					std::cout << "Recieved: \n" << r << std::endl << std::endl;
+					// req[ bytes ] = 0x00;
+					// std::string r( req + 1, bytes - 2 );
+					// std::cout << "Recieved: \n" << r << std::endl << std::endl;
 					if( it->handshaken )
 					{ // process the actual request
 						if( req[ 0 ] == 0x00 )
 						{
-							std::string s ( req + 1 );
+							std::string s ( req + 1, bytes - 1 );
+							std::cout << s << std::endl;
 							_process( *it, s.substr( 0, s.length( ) - 1 ) );
 						}
 						else
