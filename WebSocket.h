@@ -14,19 +14,16 @@ namespace WebSocket
 	typedef boost::shared_ptr< tcp::socket > sock_ptr;
 	typedef boost::shared_ptr< tcp::acceptor > accept_ptr;
 	
-	namespace
+	struct User
 	{
-		struct User
+		sock_ptr sock;
+		bool handshaken;
+		
+		User( )
 		{
-			sock_ptr sock;
-			bool handshaken;
-			
-			User( )
-			{
-				handshaken = false;
-			}
-		};
-	}
+			handshaken = false;
+		}
+	};
 
 	class WebSocket
 	{
@@ -57,13 +54,14 @@ namespace WebSocket
 		void _read( );
 		void _accept( );
 	
-		void _handshake( User& u, const std::string& header );
+		void _handshake( User& u, std::string header );
 		std::string _getField( const std::string& header, const std::string& field );
+		std::string _getPath( const std::string& line );
 		std::string _genSecret( );
 		int _extractKey( const std::string& token );
 		std::string _getBigEndRep( int x );
 		
-		void _process( User& u, const std::string& req );
+		void _process( User& u, std::string req );
 		
 		void _send( sock_ptr sock, const std::string& resp );
 	};

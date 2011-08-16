@@ -60,7 +60,12 @@ public:
   std::string hexdigest() const;
   std::string getDigest( )
   {
-	return std::string( (char*)digest );
+	std::string res = "";
+	for( int i = 0; i < 16; i++ )
+	  {
+		  res += (unsigned char)digest[ i ];
+	  } 
+	return res;
   }
   friend std::ostream& operator<<(std::ostream&, MD5 md5);
 

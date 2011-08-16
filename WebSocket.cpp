@@ -40,13 +40,15 @@ namespace WebSocket
 			std::cout << "connection :)\n\n\n\n";
 			// create a new user and add it to the list
 			User u;
-			tcp::socket::non_blocking_io command( true );
-			sock->io_control( command );
+			// tcp::socket::non_blocking_io command( true );
+			// sock->io_control( command );
 			u.sock = sock;
 			_users.push_back( u );
-			
+		}
+		
+		while( true )
+		{
 			_read( );
-			_accept( );
 		}
 	}
 	
@@ -56,30 +58,48 @@ namespace WebSocket
 		std::vector< User >::iterator it = _users.begin( );
 		while( it != _users.end( ) )
 		{
-			// std::cout << "Hello" << std::endl;
-			boost::system::error_code error;
-			std::string req;
-			size_t bytes = it->sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
-			if( error == boost::asio::error::eof )
+			if( it->sock->available( ) > 0 )
 			{
-				it->sock->close( );
-				it = _users.erase( it );
-			}
-			else if( !error && bytes > 0 )
-			{
-				std::cout << "Recieved: \n" << req << std::endl << std::endl;
-				if( it->handshaken )
-				{ // process the actual request
-					_process( *it, req );
+				// std::cout << "Hello" << std::endl;
+				boost::system::error_code error;
+				// std::string req;
+				char* req = new char[ _maxBytes ];
+				size_t bytes = it->sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
+				// size_t bytes = boost::asio::read( *(it->sock), boost::asio::buffer( req, _maxBytes ) );
+				if( error == boost::asio::error::eof )
+				{
+					std::cout << "eof" << std::endl;
+					it->sock->close( );
+					it = _users.erase( it );
 				}
-				else
-				{ // needs to handshake
-					_handshake( *it, req );
+				else if( !error && bytes > 0 )
+				{
+					std::string r( req + 1 );
+					std::cout << "Recieved: \n" << r << std::endl << std::endl;
+					if( it->handshaken )
+					{ // process the actual request
+						if( req[ 0 ] == 0x00 )
+						{
+							std::string s ( req + 1 );
+							_process( *it, s.substr( 0, s.length( ) - 1 ) );
+						}
+						else
+						{
+							_process( *it, std::string( req ) );
+						}
+					}
+					else
+					{ // needs to handshake
+						_handshake( *it, req );
+					}
 				}
-			}
-			else if( error )
-			{
-				throw error;
+				else if( error )
+				{
+					std::cout << error.message( ) << std::endl;
+					throw error;
+				}
+				
+				delete[] req;
 			}
 			
 			++it;
@@ -89,14 +109,20 @@ namespace WebSocket
 	void WebSocket::_accept( )
 	{
 			// accept the socket, if it actually accepted, add the socket to the list
+			std::cout << "Accepting..." << std::endl;
 			sock_ptr sock( new tcp::socket( _io_service ) );
 			_server_sock->async_accept( *sock, boost::bind( &WebSocket::_handleAccept, this, sock, _1 ) );
 	}
 
-	void WebSocket::_handshake( User& u, const std::string& header )
+	void WebSocket::_handshake( User& u, std::string header )
 	{
+		boost::algorithm::trim( header );
+		
 		// the request - i.e. "GET /uobnfsjldf HTTP1.1/1" or whatever the fuck it is
 		_req = header.substr( 0, header.find( '\n' ) );
+		
+		_path = _getPath( _req );
+		boost::algorithm::trim( _path );
 		
 		// the Host
 		_host = _getField( header, "Host" );
@@ -128,18 +154,26 @@ namespace WebSocket
 		// get the secret :)
 		std::string secret = _genSecret( );
 		
+		if( secret.length( ) != 16 )
+		{
+			std::cout << "MAJOR WTF\n\n\n";
+		}
+		
 		// construct the response
 		// probably needs some more validation as some of these are optional and some may depend on static values
-		std::string response = "HTTP/1.1 101 WebSocket Protocol Handshake\r\n";
+		std::string response = "";
+		//response += char( 0x00 );
+		response += "HTTP/1.1 101 WebSocket Protocol Handshake\r\n";
 		response += "Upgrade: WebSocket\r\nConnection: Upgrade\r\n";
 		response += "Sec-WebSocket-Origin: " + _origin + "\r\n";
 		response += "Sec-WebSocket-Location: ws://" + _host + _path + "\r\n";
-		response += "Sec-WebSocket-Protocol: " + _protocol + "\r\n";
+		// response += "Sec-WebSocket-Protocol: " + _protocol + "\r\n";
 		response += 0x0D;
 		response += 0x0A;
 		response += secret;
+		// response += 0xFF;
 		
-		// std::cout << response << std::endl;
+		std::cout << response << std::endl;
 		
 		_send( u.sock, response );
 		
@@ -167,11 +201,30 @@ namespace WebSocket
 		
 		return "";
 	}
+	
+	std::string WebSocket::_getPath( const std::string& line )
+	{
+		size_t start = line.find( ' ' );
+		if( start != std::string::npos )
+		{
+			size_t end = line.find( ' ', start + 1 );
+			if( end != std::string::npos )
+			{
+				return line.substr( start + 1, (end - start) - 1 );
+			}
+		}
+		
+		return "";
+	}
 
 	std::string WebSocket::_genSecret( )
 	{
 		int k1 = _extractKey( _key1 );
 		int k2 = _extractKey( _key2 );
+		
+		std::cout << "Key1 = " << _key1 << std::endl;
+		std::cout << "Key2 = " << _key2 << std::endl;
+		std::cout << "l8b = " << _l8b << std::endl;
 		
 		return md5( _getBigEndRep( k1 ) + _getBigEndRep( k2 ) + _l8b, true );
 	}
@@ -232,13 +285,17 @@ namespace WebSocket
 		return res;
 	}
 
-	void WebSocket::_process( User& u, const std::string& req )
+	void WebSocket::_process( User& u, std::string req )
 	{
+		req = char( 0x00 ) + req + char( 0xFF );
 		_send( u.sock, req );
 	}
 	
 	void WebSocket::_send( sock_ptr sock, const std::string& resp )
 	{
-		sock->send( boost::asio::buffer( resp, _maxBytes ) );
+		// resp.insert( resp.begin( ), '\0' );
+		sock->send( boost::asio::buffer( resp, resp.length( ) ) );
+		
+		std::cout << "SENT" << std::endl;
 	}
 }
