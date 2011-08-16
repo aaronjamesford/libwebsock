@@ -9,11 +9,11 @@
 #include "md5/md5.h"
 #include "WebSocket.h"
 
-namespace WebSocket
+namespace libwebsock
 {
 
 	WebSocket::WebSocket( boost::asio::io_service& io_service, int port )
-	 : _io_service( io_service ), _port( port ), _maxBytes( 2048 )
+		: _io_service( io_service ), _port( port ), _maxBytes( 2048 )
 	{
 		
 	}

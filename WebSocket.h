@@ -7,7 +7,7 @@
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 
-namespace WebSocket
+namespace libwebsock
 {
 
 	using boost::asio::ip::tcp;

@@ -12,7 +12,7 @@ int main( int argc, char** argv )
 	}
 	
 	boost::asio::io_service io_service;
-	WebSocket::WebSocket ws( io_service, 2738 );
+	libwebsock::WebSocket ws( io_service, 2738 );
 	ws.start( );
 	io_service.run( );
 	
