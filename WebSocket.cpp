@@ -5,6 +5,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/thread.hpp>
 
 #include "md5/md5.h"
 #include "WebSocket.h"
@@ -106,6 +107,26 @@ namespace libwebsock
 			}
 			
 			++it;
+		}
+	}
+	
+	void WebSocket::_read( User& u )
+	{
+		bool socketOpen = false;
+		boost::mutex::scoped_lock userLock( *(u.mut) );
+		
+		while( socketOpen )
+		{
+			userLock.lock( );
+			
+			socketOpen = u.sock->is_open( );
+			
+			if( socketOpen )
+			{
+				// try reading, process the read shit blah blah blah
+			}
+			
+			userLock.unlock( );
 		}
 	}
 	

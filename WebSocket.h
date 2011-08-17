@@ -6,6 +6,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 
 namespace libwebsock
 {
@@ -13,15 +14,18 @@ namespace libwebsock
 	using boost::asio::ip::tcp;
 	typedef boost::shared_ptr< tcp::socket > sock_ptr;
 	typedef boost::shared_ptr< tcp::acceptor > accept_ptr;
+	typedef boost::shared_ptr< boost::mutex > mutex_ptr;
 	
 	struct User
 	{
 		sock_ptr sock;
 		bool handshaken;
+		mutex_ptr mut;
 		
 		User( )
 		{
 			handshaken = false;
+			mut = mutex_ptr( new boost::mutex( ) );
 		}
 	};
 
@@ -40,9 +44,11 @@ namespace libwebsock
 		int _maxBytes;
 	
 		std::vector< User > _users;
+		boost::mutex  _userMutex;
 		
 		void _handleAccept( sock_ptr sock, const boost::system::error_code& error );
 		void _read( );
+		void _read( User& u );
 		void _accept( );
 	
 		void _handshake( User& u, std::string header );
