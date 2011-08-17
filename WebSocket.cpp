@@ -36,21 +36,18 @@ namespace libwebsock
 	
 	void WebSocket::_handleAccept( sock_ptr sock, const boost::system::error_code& error )
 	{
-		std::cout << "Errr" << std::endl;
 		if( !error )
 		{
-			std::cout << "connection :)\n\n\n\n";
+			std::cout << "connection :)\n";
 			// create a new user and add it to the list
 			User u;
-			// tcp::socket::non_blocking_io command( true );
-			// sock->io_control( command );
 			u.sock = sock;
 			_users.push_back( u );
-		}
-		
-		while( true )
-		{
-			_read( );
+			
+			// start new thread
+			boost::thread( boost::bind( &WebSocket::_read, this, u ) );
+			
+			_accept( );
 		}
 	}
 	
@@ -112,8 +109,9 @@ namespace libwebsock
 	
 	void WebSocket::_read( User& u )
 	{
-		bool socketOpen = false;
-		boost::mutex::scoped_lock userLock( *(u.mut) );
+		bool socketOpen = true;
+		boost::mutex::scoped_lock userLock( *(u.mut), boost::defer_lock );
+		// userLock.unlock( );
 		
 		while( socketOpen )
 		{
@@ -124,6 +122,38 @@ namespace libwebsock
 			if( socketOpen )
 			{
 				// try reading, process the read shit blah blah blah
+				boost::system::error_code error;
+				// std::string req;
+				char* req = new char[ _maxBytes ];
+				size_t bytes = u.sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
+				// size_t bytes = boost::asio::read( *(it->sock), boost::asio::buffer( req, _maxBytes ) );
+				if( error == boost::asio::error::eof )
+				{
+					std::cout << "eof" << std::endl;
+					u.sock->close( );
+				}
+				else if( !error && bytes > 0 )
+				{
+					if( u.handshaken )
+					{ // process the actual request
+						if( req[ 0 ] == 0x00 )
+						{
+							_process( u, std::string( req + 1, bytes - 2 ) );
+						}
+						else
+						{
+							_process( u, std::string( req ) );
+						}
+					}
+					else
+					{ // needs to handshake
+						_handshake( u, req );
+					}
+				}
+			}
+			else
+			{
+				std::cout << "Noooooooooooo" << std::endl;
 			}
 			
 			userLock.unlock( );
