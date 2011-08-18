@@ -28,12 +28,8 @@ namespace libwebsock
 		// open the socket, set it to non blocking and bind the socket
 		_server_sock->open( ep.protocol( ) );
 		// server_sock.set_option( boost::asio::socket_base::non_blocking_io( true ) );
-		tcp::acceptor::reuse_address reuse( true );
-		_server_sock->set_option( reuse );
 		_server_sock->bind( ep );
 		_server_sock->listen( );
-		
-		boost::thread( boost::bind( &WebSocket::_asyncSend, this ) );
 		
 		while( _server_sock->is_open( ) )
 		{
@@ -44,11 +40,12 @@ namespace libwebsock
 	void WebSocket::_read( User& u )
 	{
 		bool socketOpen = true;
+		boost::mutex::scoped_lock userLock( *(u.mut), boost::defer_lock );
 		// userLock.unlock( );
 		
 		while( socketOpen )
 		{
-			boost::mutex::scoped_lock userLock( *(u.mutex) );
+			userLock.lock( );
 			
 			socketOpen = u.sock->is_open( );
 			
@@ -100,44 +97,10 @@ namespace libwebsock
 			// create a new user and add it to the list
 			User u;
 			u.sock = sock;
-			
-			boost::mutex::scoped_lock lock( _userMutex );
 			_users.push_back( u );
-			lock.unlock( );
 			
 			// start new thread
 			boost::thread( boost::bind( &WebSocket::_read, this, u ) );
-		}
-	}
-	
-	void WebSocket::_asyncSend( )
-	{
-		while( true )
-		{
-			boost::mutex::scoped_lock ulock( _userMutex );
-			
-			std::vector< User >::iterator user = _users.begin( );
-			while( user < _users.end( ) )
-			{
-				boost::mutex::scoped_lock mlock( *(user->mutex) );
-				if( user->sock->is_open( ) )
-				{ // socket is open
-					if( user->q.size( ) > 0 )
-					{
-						_send( user->sock, user->q.front( ) );
-						user->q.pop( );
-					}
-				}
-				else
-				{ // socket is closed
-					user = _users.erase( user );
-				}
-				
-				mlock.unlock( );
-				++user;
-			}
-			
-			ulock.unlock( );
 		}
 	}
 
@@ -148,7 +111,6 @@ namespace libwebsock
 		if( h.processHandshake( header ) )
 		{
 			_send( u.sock, h.getHandshake( ) );
-			// _send( u, h.getHandshake( ) );
 			
 			u.handshaken = true;
 		}
@@ -158,17 +120,11 @@ namespace libwebsock
 	{
 		req = char( 0x00 ) + req + char( 0xFF );
 		_send( u.sock, req );
-		// _send( u, req );
 	}
 	
 	void WebSocket::_send( sock_ptr sock, const std::string& resp )
 	{
 		// resp.insert( resp.begin( ), '\0' );
 		sock->send( boost::asio::buffer( resp, resp.length( ) ) );
-	}
-	
-	void WebSocket::_send( User& u, const std::string& resp )
-	{
-		u.q.push( resp );
 	}
 }
