@@ -45,9 +45,7 @@ namespace libwebsock
 	
 		std::vector< User > _users;
 		boost::mutex  _userMutex;
-		
-		void _handleAccept( sock_ptr sock, const boost::system::error_code& error );
-		void _read( );
+	
 		void _read( User& u );
 		void _accept( );
 	
