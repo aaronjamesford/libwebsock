@@ -63,7 +63,7 @@ namespace libwebsock
 		
 		virtual ResponseType _process( std::string& request, std::string& response );
 		
-		void _send( sock_ptr sock, const std::string& resp );
+		void _send( User& u, const std::string& resp );
 	};
 
 }

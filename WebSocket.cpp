@@ -51,21 +51,26 @@ namespace libwebsock
 		while( socketOpen )
 		{
 			userLock.lock( );
-			
 			socketOpen = u.sock->is_open( );
+			userLock.unlock( );
 			
 			if( socketOpen )
 			{
 				// try reading, process the read shit blah blah blah
 				boost::system::error_code error;
-				// std::string req;
 				char* req = new char[ _maxBytes ];
+				
+				userLock.lock( );
 				size_t bytes = u.sock->receive( boost::asio::buffer( req, _maxBytes ), 0, error );
-				// size_t bytes = boost::asio::read( *(it->sock), boost::asio::buffer( req, _maxBytes ) );
+				userLock.unlock( );
+				
 				if( error == boost::asio::error::eof )
 				{
 					std::cout << "eof" << std::endl;
+					
+					userLock.lock( );
 					u.sock->close( );
+					userLock.unlock( );
 				}
 				else if( !error && bytes > 0 )
 				{
@@ -80,7 +85,7 @@ namespace libwebsock
 							case NO_RESPOND:
 								break;
 							case RESPOND:
-								_send( u.sock, char( 0x00 ) + response + char( 0xFF ) );
+								_send( u, char( 0x00 ) + response + char( 0xFF ) );
 								break;
 							case BROADCAST:
 								// add call to _broadcast
@@ -88,14 +93,12 @@ namespace libwebsock
 							default:
 								break;
 							}
-							/* if( _process( request, response ) )
-							{
-								_send( u.sock, char( 0x00 ) + response + char( 0xFF ) );
-							} */
 						}
 						else if( (unsigned char)req[ 0 ] == (unsigned char)0xFF && req[ 1 ] == 0x00 )
 						{ // Request to close the connection
+							userLock.lock( );
 							u.sock->close( );
+							userLock.unlock( );
 						}
 					}
 					else
@@ -105,7 +108,7 @@ namespace libwebsock
 				}
 			}
 			
-			userLock.unlock( );
+			// userLock.unlock( );
 		}
 	}
 	
@@ -136,7 +139,7 @@ namespace libwebsock
 		
 		if( h.processHandshake( header ) )
 		{
-			_send( u.sock, h.getHandshake( ) );
+			_send( u, h.getHandshake( ) );
 			
 			u.handshaken = true;
 		}
@@ -149,9 +152,13 @@ namespace libwebsock
 		return RESPOND;
 	}
 	
-	void WebSocket::_send( sock_ptr sock, const std::string& resp )
+	void WebSocket::_send( User& u, const std::string& resp )
 	{
-		// resp.insert( resp.begin( ), '\0' );
-		sock->send( boost::asio::buffer( resp, resp.length( ) ) );
+		boost::mutex::scoped_lock uLock( *(u.mut) );
+		if( u.sock->is_open( ) )
+		{
+			u.sock->send( boost::asio::buffer( resp, resp.length( ) ) );
+		}
+		uLock.unlock( );
 	}
 }
