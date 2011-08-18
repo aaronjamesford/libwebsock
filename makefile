@@ -7,16 +7,16 @@ _boost := /usr/lib/boost_1_44_0
 all : md5 websock
 
 test : md5 handshake websock
-	g++ -I${_boost} Handshake.o WebSocket.o md5.o test.cpp -L${_boost}/stage/lib -lboost_system -lboost_thread -o test
+	g++ -g -I${_boost} Handshake.o WebSocket.o md5.o test.cpp -L${_boost}/stage/lib -lboost_system -lboost_thread -o test
 
 websock : ${_websock}
-	g++ -I${_boost} WebSocket.cpp -c
+	g++ -g -I${_boost} WebSocket.cpp -c
 
 handshake : ${_handshake}
-	g++ -I${_boost} Handshake.cpp -c
+	g++ -g -I${_boost} Handshake.cpp -c
 
 md5 : ${_md5}
-	g++ ./md5/md5.cpp -c
+	g++ -g ./md5/md5.cpp -c
 
 clean :
 	rm -rf *.o
