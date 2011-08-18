@@ -56,7 +56,7 @@ namespace libwebsock
 	
 		void _handshake( User& u, std::string header );
 		
-		void _process( User& u, std::string req );
+		virtual void _process( User& u, std::string req );
 		
 		void _send( sock_ptr sock, const std::string& resp );
 	};
