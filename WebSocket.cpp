@@ -128,12 +128,6 @@ namespace libwebsock
 			u.handshaken = true;
 		}
 	}
-
-	void WebSocket::_process( User& u, std::string req )
-	{
-		req = char( 0x00 ) + req + char( 0xFF );
-		_send( u.sock, req );
-	}
 	
 	bool WebSocket::_process( std::string& request, std::string& response )
 	{
