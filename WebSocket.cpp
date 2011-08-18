@@ -27,6 +27,8 @@ namespace libwebsock
 		
 		// open the socket, set it to non blocking and bind the socket
 		_server_sock->open( ep.protocol( ) );
+		tcp::acceptor::reuse_address reuse( true );
+		_server_sock->set_option( reuse );
 		// server_sock.set_option( boost::asio::socket_base::non_blocking_io( true ) );
 		_server_sock->bind( ep );
 		_server_sock->listen( );
