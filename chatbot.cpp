@@ -22,7 +22,7 @@ protected:
 			response = "I have no idea what you just said, but I'm sure it was interesting";
 		}
 		
-		return libwebsock::RESPOND;
+		return libwebsock::BROADCAST;
 	}
 };
 
@@ -31,4 +31,5 @@ int main( )
 	boost::asio::io_service io_stream;
 	ChatBot cb( io_stream, 2738 );
 	cb.start( );
+	io_stream.run( );
 }

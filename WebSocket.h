@@ -15,6 +15,7 @@ namespace libwebsock
 	typedef boost::shared_ptr< tcp::socket > sock_ptr;
 	typedef boost::shared_ptr< tcp::acceptor > accept_ptr;
 	typedef boost::shared_ptr< boost::mutex > mutex_ptr;
+	typedef boost::shared_ptr< std::string > str_ptr;
 	
 	struct User
 	{
@@ -57,13 +58,19 @@ namespace libwebsock
 		boost::mutex  _userMutex;
 	
 		void _read( User& u );
+		void _async_read( User& u, char* request, const boost::system::error_code& error, size_t bytes_transferred );
+	
 		void _accept( );
+		void _async_accept( sock_ptr sock, const boost::system::error_code& error );
 	
 		void _handshake( User& u, std::string header );
 		
 		virtual ResponseType _process( std::string& request, std::string& response );
 		
+		void _broadcast( const std::string& message );
 		void _send( User& u, const std::string& resp );
+		void _async_send( User& u, std::string resp );
+		void _async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred );
 	};
 
 }

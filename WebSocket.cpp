@@ -28,15 +28,20 @@ namespace libwebsock
 		// open the socket, set it to non blocking and bind the socket
 		_server_sock->open( ep.protocol( ) );
 		tcp::acceptor::reuse_address reuse( true );
-		_server_sock->set_option( reuse );
+		// _server_sock->set_option( reuse );
 		// server_sock.set_option( boost::asio::socket_base::non_blocking_io( true ) );
 		_server_sock->bind( ep );
 		_server_sock->listen( );
 		
+		sock_ptr s( new tcp::socket( _io_service ) );
+		_server_sock->async_accept( *s, boost::bind( &WebSocket::_async_accept, this, s, boost::asio::placeholders::error ) );
+		
+		/*
 		while( _server_sock->is_open( ) )
 		{
 			_accept( );
 		}
+		*/
 	}
 	
 	void WebSocket::_read( User& u )
@@ -52,9 +57,10 @@ namespace libwebsock
 		{
 			userLock.lock( );
 			socketOpen = u.sock->is_open( );
+			size_t bytesAvailable = u.sock->available( );
 			userLock.unlock( );
 			
-			if( socketOpen )
+			if( socketOpen && bytesAvailable > 0 )
 			{
 				// try reading, process the read shit blah blah blah
 				boost::system::error_code error;
@@ -72,7 +78,7 @@ namespace libwebsock
 					u.sock->close( );
 					userLock.unlock( );
 				}
-				else if( !error && bytes > 0 )
+				else if( bytes > 0 )
 				{
 					if( u.handshaken )
 					{ // process the actual request
@@ -88,7 +94,7 @@ namespace libwebsock
 								_send( u, char( 0x00 ) + response + char( 0xFF ) );
 								break;
 							case BROADCAST:
-								// add call to _broadcast
+								_broadcast( char( 0x00 ) + response + char( 0xFF ) );
 								break;
 							default:
 								break;
@@ -112,6 +118,54 @@ namespace libwebsock
 		}
 	}
 	
+	void WebSocket::_async_read( User& u, char* request, const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		if( !error )
+		{
+			if( u.handshaken )
+			{ // bitch has handshaken. Lets process him :)
+				if( request[ 0 ] == 0x00 && (unsigned char)request[ bytes_transferred - 1] == (unsigned char)0xFF )
+				{
+					// trim the string
+					std::string req( request + 1, bytes_transferred - 2 );
+					std::string response;
+					
+					// process and take appropiate action
+					switch( _process( req, response ) )
+					{
+					case NO_RESPOND:
+						break;
+					case RESPOND:
+						_async_send( u, char( 0x00 ) + response + char( 0xFF ) );
+						break;
+					case BROADCAST:
+						// _broadcast( char( 0x00 ) + response + char( 0xFF ) );
+						break;
+					default:
+						break;
+					}
+				}
+				else if( (unsigned char)request[ 0 ] == (unsigned char)0xFF && request[ 1 ] == 0x00 )
+				{ // client has usked us to close connection
+					u.sock->close( );
+					delete[ ] request;
+					
+					return;
+				}
+			}
+			else
+			{// lets shake hands, mr client
+				_handshake( u, std::string( request ) );
+			}
+			
+			u.sock->async_receive( boost::asio::buffer( request, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, request, _1, _2 ) );
+		}
+		else if( error == boost::asio::error::eof )
+		{
+			u.sock->close( );
+		}
+	}
+	
 	void WebSocket::_accept( )
 	{
 		// accept the socket, if it actually accepted, add the socket to the list
@@ -122,6 +176,9 @@ namespace libwebsock
 		{
 			// create a new user and add it to the list
 			User u;
+			
+			tcp::socket::non_blocking_io nonBlock( true );
+			sock->io_control( nonBlock );
 			u.sock = sock;
 			
 			boost::mutex::scoped_lock ulock( _userMutex );
@@ -130,6 +187,29 @@ namespace libwebsock
 			
 			// start new thread
 			boost::thread( boost::bind( &WebSocket::_read, this, u ) );
+		}
+	}
+	
+	void WebSocket::_async_accept( sock_ptr sock, const boost::system::error_code& error )
+	{
+		if( !error )
+		{
+			// create a new user and add it to the list
+			User u;
+			
+			tcp::socket::non_blocking_io nonBlock( true );
+			sock->io_control( nonBlock );
+			u.sock = sock;
+			
+			boost::mutex::scoped_lock ulock( _userMutex );
+			_users.push_back( u );
+			ulock.unlock( );
+			
+			char* buf = new char[ _maxBytes ];
+			sock->async_receive( boost::asio::buffer( buf, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, buf, _1, _2 ) );
+			
+			sock_ptr s( new tcp::socket( _io_service ) );
+			_server_sock->async_accept( *s, boost::bind( &WebSocket::_async_accept, this, s, boost::asio::placeholders::error ) );
 		}
 	}
 
@@ -152,13 +232,39 @@ namespace libwebsock
 		return RESPOND;
 	}
 	
+	void WebSocket::_broadcast( const std::string& message )
+	{
+		std::vector< User >::iterator user = _users.begin( );
+		while( user < _users.end( ) )
+		{
+			_send( *user, message );
+			
+			++user;
+		}
+	}
+	
 	void WebSocket::_send( User& u, const std::string& resp )
 	{
-		boost::mutex::scoped_lock uLock( *(u.mut) );
 		if( u.sock->is_open( ) )
 		{
 			u.sock->send( boost::asio::buffer( resp, resp.length( ) ) );
 		}
-		uLock.unlock( );
+	}
+	
+	void WebSocket::_async_send( User& u, std::string resp )
+	{
+		if( u.sock->is_open( ) )
+		{
+			str_ptr r( &resp );
+			
+			u.sock->async_send( boost::asio::buffer( *r, r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
+		}
+	}
+	
+	void WebSocket::_async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		/*
+		 -- Empty Implementation
+		*/
 	}
 }
