@@ -41,6 +41,9 @@ namespace libwebsock
 	
 	void WebSocket::_read( User& u )
 	{
+		std::string disconnect( 2, 0x00 );
+		disconnect[ 1 ] = 0xFF;
+		
 		bool socketOpen = true;
 		boost::mutex::scoped_lock userLock( *(u.mut), boost::defer_lock );
 		// userLock.unlock( );
@@ -68,13 +71,18 @@ namespace libwebsock
 				{
 					if( u.handshaken )
 					{ // process the actual request
-						if( req[ 0 ] == 0x00 )
-						{
-							_process( u, std::string( req + 1, bytes - 2 ) );
+						if( req[ 0 ] == 0x00 && (unsigned char)req[ bytes - 1] == (unsigned char)0xFF )
+						{ // a real request
+							std::string request( req + 1, bytes - 2 );
+							std::string response;
+							if( _process( request, response ) )
+							{
+								_send( u.sock, char( 0x00 ) + response + char( 0xFF ) );
+							}
 						}
-						else
-						{
-							_process( u, std::string( req ) );
+						else if( (unsigned char)req[ 0 ] == (unsigned char)0xFF && req[ 1 ] == 0x00 )
+						{ // Request to close the connection
+							u.sock->close( );
 						}
 					}
 					else
@@ -125,6 +133,13 @@ namespace libwebsock
 	{
 		req = char( 0x00 ) + req + char( 0xFF );
 		_send( u.sock, req );
+	}
+	
+	bool WebSocket::_process( std::string& request, std::string& response )
+	{
+		response = request;
+		
+		return true;
 	}
 	
 	void WebSocket::_send( sock_ptr sock, const std::string& resp )
