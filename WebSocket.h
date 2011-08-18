@@ -18,8 +18,13 @@ namespace libwebsock
 	
 	struct User
 	{
+		// socket for receiving / sending
 		sock_ptr sock;
+		
+		// to provide status on the handshake
 		bool handshaken;
+		
+		// mutex for exclusive access to the resource
 		mutex_ptr mut;
 		
 		User( )
@@ -36,7 +41,7 @@ namespace libwebsock
 		~WebSocket( ) { };
 			
 		void start( );
-	private:
+	protected:
 		boost::asio::io_service& _io_service;
 		accept_ptr _server_sock;
 		

@@ -97,7 +97,10 @@ namespace libwebsock
 			// create a new user and add it to the list
 			User u;
 			u.sock = sock;
+			
+			boost::mutex::scoped_lock ulock( _userMutex );
 			_users.push_back( u );
+			ulock.unlock( );
 			
 			// start new thread
 			boost::thread( boost::bind( &WebSocket::_read, this, u ) );
