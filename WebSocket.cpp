@@ -75,10 +75,23 @@ namespace libwebsock
 						{ // a real request
 							std::string request( req + 1, bytes - 2 );
 							std::string response;
-							if( _process( request, response ) )
+							switch( _process( request, response ) )
+							{
+							case NO_RESPOND:
+								break;
+							case RESPOND:
+								_send( u.sock, char( 0x00 ) + response + char( 0xFF ) );
+								break;
+							case BROADCAST:
+								// add call to _broadcast
+								break;
+							default:
+								break;
+							}
+							/* if( _process( request, response ) )
 							{
 								_send( u.sock, char( 0x00 ) + response + char( 0xFF ) );
-							}
+							} */
 						}
 						else if( (unsigned char)req[ 0 ] == (unsigned char)0xFF && req[ 1 ] == 0x00 )
 						{ // Request to close the connection
@@ -129,11 +142,11 @@ namespace libwebsock
 		}
 	}
 	
-	bool WebSocket::_process( std::string& request, std::string& response )
+	ResponseType WebSocket::_process( std::string& request, std::string& response )
 	{
 		response = request;
 		
-		return true;
+		return RESPOND;
 	}
 	
 	void WebSocket::_send( sock_ptr sock, const std::string& resp )

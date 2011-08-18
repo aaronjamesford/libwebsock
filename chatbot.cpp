@@ -7,7 +7,7 @@ class ChatBot : public libwebsock::WebSocket
 public:
 	ChatBot( boost::asio::io_service& io_service, int port ) : libwebsock::WebSocket( io_service, port ) { }
 protected:
-	bool _process( std::string& request, std::string& response )
+	libwebsock::ResponseType _process( std::string& request, std::string& response )
 	{
 		if( request == "hello" )
 		{
@@ -22,7 +22,7 @@ protected:
 			response = "I have no idea what you just said, but I'm sure it was interesting";
 		}
 		
-		return true;
+		return libwebsock::RESPOND;
 	}
 };
 

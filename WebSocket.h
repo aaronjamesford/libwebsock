@@ -33,6 +33,11 @@ namespace libwebsock
 			mut = mutex_ptr( new boost::mutex( ) );
 		}
 	};
+	
+	enum ResponseType
+	{
+		NO_RESPOND, RESPOND, BROADCAST
+	};
 
 	class WebSocket
 	{
@@ -56,7 +61,7 @@ namespace libwebsock
 	
 		void _handshake( User& u, std::string header );
 		
-		virtual bool _process( std::string& request, std::string& response );
+		virtual ResponseType _process( std::string& request, std::string& response );
 		
 		void _send( sock_ptr sock, const std::string& resp );
 	};
