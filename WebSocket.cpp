@@ -52,15 +52,15 @@ namespace libwebsock
 					std::string response;
 					
 					// process and take appropiate action
-					switch( _process( req, response ) )
+					switch( process( req, response ) )
 					{
 					case NO_RESPOND:
 						break;
 					case RESPOND:
-						_async_send( u, char( 0x00 ) + response + char( 0xFF ) );
+						_async_send( u, response );
 						break;
 					case BROADCAST:
-						_async_broadcast( char( 0x00 ) + response + char( 0xFF ) );
+						_async_broadcast( response );
 						break;
 					default:
 						break;
@@ -127,13 +127,6 @@ namespace libwebsock
 		}
 	}
 	
-	ResponseType WebSocket::_process( std::string& request, std::string& response )
-	{
-		response = request;
-		
-		return RESPOND;
-	}
-	
 	void WebSocket::_async_broadcast( const std::string& message )
 	{
 		std::vector< User >::iterator user = _users.begin( );
@@ -147,6 +140,11 @@ namespace libwebsock
 	
 	void WebSocket::_async_send( usr_ptr u, std::string resp )
 	{
+		if( u->handshaken )
+		{
+			_pad( resp );
+		}
+		
 		if( u->sock->is_open( ) )
 		{
 			str_ptr r( new std::string( resp ) );
@@ -160,5 +158,22 @@ namespace libwebsock
 		/*
 		 -- Empty Implementation
 		*/
+	}
+	
+	void WebSocket::_pad( std::string& message )
+	{
+		message = std::string( char( 0x00 ) + message + char( 0xFF ) );
+	}
+	
+	void WebSocket::broadcast( std::string message )
+	{
+		_async_broadcast( message );
+	}
+	
+	ResponseType WebSocket::process( std::string& request, std::string& response )
+	{
+		response = request;
+		
+		return RESPOND;
 	}
 }

@@ -7,7 +7,7 @@ class ChatBot : public libwebsock::WebSocket
 public:
 	ChatBot( boost::asio::io_service& io_service, int port ) : libwebsock::WebSocket( io_service, port ) { }
 protected:
-	libwebsock::ResponseType _process( std::string& request, std::string& response )
+	libwebsock::ResponseType process( std::string& request, std::string& response )
 	{
 		if( request == "hello" )
 		{

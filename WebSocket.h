@@ -49,6 +49,9 @@ namespace libwebsock
 			
 		void start( );
 	protected:
+		virtual ResponseType process( std::string& request, std::string& response );
+		void broadcast( std::string message );
+	private:
 		boost::asio::io_service& _io_service;
 		accept_ptr _server_sock;
 		
@@ -64,11 +67,11 @@ namespace libwebsock
 	
 		void _handshake( User& u, std::string header );
 		
-		virtual ResponseType _process( std::string& request, std::string& response );
-		
 		void _async_broadcast( const std::string& message );
 		void _async_send( usr_ptr u, std::string resp );
 		void _async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred );
+	
+		void _pad( std::string& message );
 	};
 
 }
