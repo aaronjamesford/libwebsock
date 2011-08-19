@@ -22,7 +22,7 @@ protected:
 			response = "I have no idea what you just said, but I'm sure it was interesting";
 		}
 		
-		return libwebsock::BROADCAST;
+		return libwebsock::RESPOND;
 	}
 };
 
