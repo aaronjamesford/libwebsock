@@ -5,7 +5,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 
 #include "md5/md5.h"
 #include "WebSocket.h"
@@ -103,9 +102,7 @@ namespace libwebsock
 			usr_ptr u( new User( ) );
 			u->sock = sock;
 			
-			boost::mutex::scoped_lock ulock( _userMutex );
 			_users.push_back( *u );
-			ulock.unlock( );
 			
 			char* buf = new char[ _maxBytes ];
 			sock->async_receive( boost::asio::buffer( buf, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, buf, _1, _2 ) );
