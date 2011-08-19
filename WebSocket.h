@@ -58,10 +58,8 @@ namespace libwebsock
 		std::vector< User > _users;
 		boost::mutex  _userMutex;
 	
-		void _read( User& u );
 		void _async_read( usr_ptr u, char* request, const boost::system::error_code& error, size_t bytes_transferred );
 	
-		void _accept( );
 		void _async_accept( sock_ptr sock, const boost::system::error_code& error );
 	
 		void _handshake( User& u, std::string header );
@@ -69,7 +67,6 @@ namespace libwebsock
 		virtual ResponseType _process( std::string& request, std::string& response );
 		
 		void _broadcast( const std::string& message );
-		void _send( User& u, const std::string& resp );
 		void _async_send( usr_ptr u, std::string resp );
 		void _async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred );
 	};
