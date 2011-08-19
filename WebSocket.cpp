@@ -28,7 +28,7 @@ namespace libwebsock
 		// open the socket, set it to non blocking and bind the socket
 		_server_sock->open( ep.protocol( ) );
 		tcp::acceptor::reuse_address reuse( true );
-		// _server_sock->set_option( reuse );
+		_server_sock->set_option( reuse );
 		// server_sock.set_option( boost::asio::socket_base::non_blocking_io( true ) );
 		_server_sock->bind( ep );
 		_server_sock->listen( );
@@ -118,11 +118,11 @@ namespace libwebsock
 		}
 	}
 	
-	void WebSocket::_async_read( User& u, char* request, const boost::system::error_code& error, size_t bytes_transferred )
+	void WebSocket::_async_read( usr_ptr u, char* request, const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if( !error )
 		{
-			if( u.handshaken )
+			if( u->handshaken )
 			{ // bitch has handshaken. Lets process him :)
 				if( request[ 0 ] == 0x00 && (unsigned char)request[ bytes_transferred - 1] == (unsigned char)0xFF )
 				{
@@ -147,7 +147,7 @@ namespace libwebsock
 				}
 				else if( (unsigned char)request[ 0 ] == (unsigned char)0xFF && request[ 1 ] == 0x00 )
 				{ // client has usked us to close connection
-					u.sock->close( );
+					u->sock->close( );
 					delete[ ] request;
 					
 					return;
@@ -155,14 +155,22 @@ namespace libwebsock
 			}
 			else
 			{// lets shake hands, mr client
-				_handshake( u, std::string( request ) );
+				_handshake( *u, std::string( request ) );
 			}
-			
-			u.sock->async_receive( boost::asio::buffer( request, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, request, _1, _2 ) );
+		
+			// request = new char[ _maxBytes ];
+			u->sock->async_receive( boost::asio::buffer( request, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, request, _1, _2 ) );
 		}
 		else if( error == boost::asio::error::eof )
 		{
-			u.sock->close( );
+			delete[ ] request;
+			
+			u->sock->close( );
+		}
+		else
+		{
+			delete[ ] request;
+			std::cout << "Error: " << error.message( ) << std::endl;
 		}
 	}
 	
@@ -195,14 +203,14 @@ namespace libwebsock
 		if( !error )
 		{
 			// create a new user and add it to the list
-			User u;
+			usr_ptr u( new User( ) );
 			
-			tcp::socket::non_blocking_io nonBlock( true );
-			sock->io_control( nonBlock );
-			u.sock = sock;
+			// tcp::socket::non_blocking_io nonBlock( true );
+			// sock->io_control( nonBlock );
+			u->sock = sock;
 			
 			boost::mutex::scoped_lock ulock( _userMutex );
-			_users.push_back( u );
+			_users.push_back( *u );
 			ulock.unlock( );
 			
 			char* buf = new char[ _maxBytes ];
@@ -251,13 +259,13 @@ namespace libwebsock
 		}
 	}
 	
-	void WebSocket::_async_send( User& u, std::string resp )
+	void WebSocket::_async_send( usr_ptr u, std::string resp )
 	{
-		if( u.sock->is_open( ) )
+		if( u->sock->is_open( ) )
 		{
-			str_ptr r( &resp );
+			str_ptr r( new std::string( resp ) );
 			
-			u.sock->async_send( boost::asio::buffer( *r, r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
+			u->sock->async_send( boost::asio::buffer( *r, r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
 		}
 	}
 	
