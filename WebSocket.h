@@ -66,7 +66,7 @@ namespace libwebsock
 		
 		virtual ResponseType _process( std::string& request, std::string& response );
 		
-		void _broadcast( const std::string& message );
+		void _async_broadcast( const std::string& message );
 		void _async_send( usr_ptr u, std::string resp );
 		void _async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred );
 	};

@@ -60,7 +60,7 @@ namespace libwebsock
 						_async_send( u, char( 0x00 ) + response + char( 0xFF ) );
 						break;
 					case BROADCAST:
-						// _broadcast( char( 0x00 ) + response + char( 0xFF ) );
+						_async_broadcast( char( 0x00 ) + response + char( 0xFF ) );
 						break;
 					default:
 						break;
@@ -121,7 +121,7 @@ namespace libwebsock
 		
 		if( h.processHandshake( header ) )
 		{
-			_send( u, h.getHandshake( ) );
+			_async_send( usr_ptr( new User( u ) ), h.getHandshake( ) );
 			
 			u.handshaken = true;
 		}
@@ -134,12 +134,12 @@ namespace libwebsock
 		return RESPOND;
 	}
 	
-	void WebSocket::_broadcast( const std::string& message )
+	void WebSocket::_async_broadcast( const std::string& message )
 	{
 		std::vector< User >::iterator user = _users.begin( );
 		while( user < _users.end( ) )
 		{
-			_send( *user, message );
+			_async_send( usr_ptr( new User( *user ) ), message );
 			
 			++user;
 		}
