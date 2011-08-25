@@ -1,6 +1,8 @@
 #include <string>
 #include <boost/algorithm/string/trim.hpp>
 
+#include <iostream>
+
 #include "Handshake.h"
 #include "md5/md5.h"
 
@@ -15,7 +17,7 @@ namespace libwebsock
 	
 	bool Handshake::processHandshake( std::string& header )
 	{
-		boost::algorithm::trim( header );
+		// boost::algorithm::trim( header );
 		
 		// the request - i.e. "GET /uobnfsjldf HTTP1.1/1" or whatever the fuck it is
 		_req = header.substr( 0, header.find( '\n' ) );
@@ -47,6 +49,10 @@ namespace libwebsock
 		
 		// the last 8 bytes is easy peasy
 		_l8b = header.substr( header.length( ) - 8 );
+		if( _l8b.length( ) != 8 )
+		{
+			std::cout << "\n\n\nWTF NOT 8\n\n\n";
+		}
 		
 		// TODO : validate all the fields gathered so far
 		
@@ -67,6 +73,11 @@ namespace libwebsock
 		response += secret;
 		
 		_handshake = response;
+		
+		if( secret.length() != 16 )
+		{
+			std::cout << "\n\n\nOH NOES, Secret Length is ILLIN' - " << secret.length( ) << "\n\n\n";
+		}
 		
 		// place holder
 		return true;
@@ -119,7 +130,9 @@ namespace libwebsock
 		int k1 = _extractKey( _key1 );
 		int k2 = _extractKey( _key2 );
 		
-		return md5( _getBigEndRep( k1 ) + _getBigEndRep( k2 ) + _l8b, true );
+		std::string k( _getBigEndRep( k1 ) + _getBigEndRep( k2 ) + _l8b );
+		
+		return md5( k , true );
 	}
 
 	int Handshake::_extractKey( const std::string& token )

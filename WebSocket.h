@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
@@ -22,6 +23,7 @@ namespace libwebsock
 		sock_ptr sock;
 		// to provide status on the handshake
 		bool handshaken;
+		int uid;
 		
 		User( )
 		{
@@ -51,19 +53,23 @@ namespace libwebsock
 		int _port;
 		int _maxBytes;
 	
-		std::vector< User > _users;
+		std::map< int, User > _users;
+		int _current_id;
+		// std::vector< User > _users;
 	
 		void _async_read( usr_ptr u, char* request, const boost::system::error_code& error, size_t bytes_transferred );
 	
 		void _async_accept( sock_ptr sock, const boost::system::error_code& error );
 	
-		void _handshake( User& u, std::string header );
+		void _handshake( usr_ptr u, std::string header );
 		
 		void _async_broadcast( const std::string& message );
 		void _async_send( usr_ptr u, std::string resp );
 		void _async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred );
 	
 		void _pad( std::string& message );
+	
+		void _disconnect( usr_ptr u );
 	};
 
 }

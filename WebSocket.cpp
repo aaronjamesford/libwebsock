@@ -1,4 +1,5 @@
 #include <string>
+#include <map>
 #include <iostream>
 
 #include <boost/algorithm/string/trim.hpp>
@@ -16,7 +17,7 @@ namespace libwebsock
 	WebSocket::WebSocket( boost::asio::io_service& io_service, int port )
 		: _io_service( io_service ), _port( port ), _maxBytes( 2048 )
 	{
-		
+		_current_id = 0;
 	}
 	
 	void WebSocket::start( )
@@ -67,7 +68,11 @@ namespace libwebsock
 				}
 				else if( (unsigned char)request[ 0 ] == (unsigned char)0xFF && request[ 1 ] == 0x00 )
 				{ // client has usked us to close connection
-					u->sock->close( );
+					// u->sock->close( );
+					
+					std::cout << "Request from client " << u->uid << " to close the connection." << std::endl;
+					
+					_disconnect( u );
 					delete[ ] request;
 					
 					return;
@@ -75,7 +80,8 @@ namespace libwebsock
 			}
 			else
 			{// lets shake hands, mr client
-				_handshake( *u, std::string( request ) );
+				std::cout << "Handshaking with client " << u->uid << std::endl;
+				_handshake( u, std::string( request, bytes_transferred ) );
 			}
 		
 			// request = new char[ _maxBytes ];
@@ -85,7 +91,9 @@ namespace libwebsock
 		{
 			delete[ ] request;
 			
-			u->sock->close( );
+			std::cout << "Client " << u->uid << " closed the connection." << std::endl;
+			// u->sock->close( );
+			_disconnect( u );
 		}
 		else
 		{
@@ -101,8 +109,13 @@ namespace libwebsock
 			// create a new user and add it to the list
 			usr_ptr u( new User( ) );
 			u->sock = sock;
+			u->uid = _current_id++;
+			u->handshaken = false;
 			
-			_users.push_back( *u );
+			std::cout << "New connection, giving id of " << u->uid << std::endl;
+			
+			// _users.push_back( *u );
+			_users[ u->uid ] = *u;
 			
 			char* buf = new char[ _maxBytes ];
 			sock->async_receive( boost::asio::buffer( buf, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, buf, _1, _2 ) );
@@ -112,24 +125,28 @@ namespace libwebsock
 		}
 	}
 
-	void WebSocket::_handshake( User& u, std::string header )
+	void WebSocket::_handshake( usr_ptr u, std::string header )
 	{
 		Handshake h;
 		
 		if( h.processHandshake( header ) )
 		{
-			_async_send( usr_ptr( new User( u ) ), h.getHandshake( ) );
+			_async_send( u, h.getHandshake( ) );
 			
-			u.handshaken = true;
+			u->handshaken = true;
+		}
+		else
+		{
+			std::cout << "Handshake fail with client " << u->uid << std::endl;
 		}
 	}
 	
 	void WebSocket::_async_broadcast( const std::string& message )
 	{
-		std::vector< User >::iterator user = _users.begin( );
-		while( user < _users.end( ) )
+		std::map< int, User >::iterator user = _users.begin( );
+		while( user != _users.end( ) )
 		{
-			_async_send( usr_ptr( new User( *user ) ), message );
+			_async_send( usr_ptr( new User( user->second ) ), message );
 			
 			++user;
 		}
@@ -146,15 +163,16 @@ namespace libwebsock
 		{
 			str_ptr r( new std::string( resp ) );
 			
-			u->sock->async_send( boost::asio::buffer( *r, r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
+			u->sock->async_send( boost::asio::buffer( (unsigned char*)r->c_str( ), r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
 		}
 	}
 	
 	void WebSocket::_async_sent( str_ptr sent, const boost::system::error_code& error, size_t bytes_transferred )
 	{
-		/*
-		 -- Empty Implementation
-		*/
+		if( error )
+		{
+			std::cout << "Error sending to client: " << error.message( ) << "\n\n\n";
+		}
 	}
 	
 	void WebSocket::_pad( std::string& message )
@@ -165,6 +183,13 @@ namespace libwebsock
 	void WebSocket::broadcast( std::string message )
 	{
 		_async_broadcast( message );
+	}
+	
+	void WebSocket::_disconnect( usr_ptr u )
+	{
+		std::cout << "Disconnection with client " << u->uid << std::endl;
+		u->sock->close( );
+		_users.erase( u->uid );
 	}
 	
 	ResponseType WebSocket::process( std::string& request, std::string& response )
