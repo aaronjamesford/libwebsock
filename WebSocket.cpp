@@ -46,48 +46,82 @@ namespace libwebsock
 		{
 			if( u->handshaken )
 			{ // bitch has handshaken. Lets process him :)
-				if( request[ 0 ] == 0x00 && (unsigned char)request[ bytes_transferred - 1] == (unsigned char)0xFF )
+				size_t start = 0;
+				size_t end = 0;
+				bool foundframe = true;
+				int framecount = 0;
+				
+				while( foundframe )
 				{
-					// trim the string
-					std::string req( request + 1, bytes_transferred - 2 );
-					std::string response;
+					end = start + 1;
+					foundframe = false;
 					
-					// process and take appropiate action
-					switch( process( req, response ) )
+					while( !foundframe && end < bytes_transferred )
 					{
-					case NO_RESPOND:
-						break;
-					case RESPOND:
-						_async_send( u, response );
-						break;
-					case BROADCAST:
-						std::cout << "Broadcast\n\n";
-						_async_broadcast( response );
-						break;
-					default:
-						std::cout << "Error\n\n";
-						break;
+						if( (request[ start ] == 0x00 && (unsigned char)request[ end ] == (unsigned char)0xFF) 
+							|| ((unsigned char)request[ start ] == (unsigned char)0xFF && request[ end ] == 0x00) )
+						{
+							foundframe = true;
+							framecount ++;
+						}
+						else
+						{
+							end++;
+						}
 					}
-				}
-				else if( (unsigned char)request[ 0 ] == (unsigned char)0xFF && request[ 1 ] == 0x00 )
-				{ // client has usked us to close connection
-					// u->sock->close( );
 					
-					std::cout << "Request from client " << u->uid << " to close the connection." << std::endl;
-					
-					_disconnect( u );
-					delete[ ] request;
-					
-					return;
-				}
-				else
-				{
-					std::cout << "Unknown command: \n";
-					for( int i = 0; i < bytes_transferred; i++ )
+					if( foundframe )
 					{
-						printf( "0x%2X ", (unsigned char)request[ i ] );
+						if( request[ start ] == 0x00 && (unsigned char)request[ end ] == (unsigned char)0xFF )
+						{
+							// trim the string
+							std::string req( request + start + 1, (end - start) - 1 );
+							std::string response;
+							
+							// process and take appropiate action
+							switch( process( req, response ) )
+							{
+							case NO_RESPOND:
+								break;
+							case RESPOND:
+								_async_send( u, response );
+								break;
+							case BROADCAST:
+								std::cout << "Broadcast\n\n";
+								_async_broadcast( response );
+								break;
+							default:
+								std::cout << "Error\n\n";
+								break;
+							}
+						}
+						else if( (unsigned char)request[ start ] == (unsigned char)0xFF && request[ end ] == 0x00 )
+						{ // client has usked us to close connection
+							// u->sock->close( );
+							
+							std::cout << "Request from client " << u->uid << " to close the connection." << std::endl;
+							
+							_disconnect( u );
+							delete[ ] request;
+							
+							return;
+						}
+						else
+						{
+							std::cout << "Unknown command: \n";
+							for( int i = 0; i < bytes_transferred; i++ )
+							{
+								printf( "0x%2X ", (unsigned char)request[ i ] );
+							}
+							
+							std::cout << std::endl;
+						}
 					}
+					
+					start = end + 1;
 				}
+				
+				std::cout << "Frames in request: " << framecount << std::endl;
 			}
 			else
 			{// lets shake hands, mr client
