@@ -53,7 +53,7 @@ namespace libwebsock
 		int _port;
 		int _maxBytes;
 	
-		std::map< int, User > _users;
+		std::map< int, usr_ptr > _users;
 		int _current_id;
 		// std::vector< User > _users;
 	

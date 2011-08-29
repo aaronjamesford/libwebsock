@@ -1,6 +1,7 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <cstdio>
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/shared_ptr.hpp>
@@ -60,9 +61,11 @@ namespace libwebsock
 						_async_send( u, response );
 						break;
 					case BROADCAST:
+						std::cout << "Broadcast\n\n";
 						_async_broadcast( response );
 						break;
 					default:
+						std::cout << "Error\n\n";
 						break;
 					}
 				}
@@ -76,6 +79,14 @@ namespace libwebsock
 					delete[ ] request;
 					
 					return;
+				}
+				else
+				{
+					std::cout << "Unknown command: \n";
+					for( int i = 0; i < bytes_transferred; i++ )
+					{
+						printf( "0x%2X ", (unsigned char)request[ i ] );
+					}
 				}
 			}
 			else
@@ -115,7 +126,7 @@ namespace libwebsock
 			std::cout << "New connection, giving id of " << u->uid << std::endl;
 			
 			// _users.push_back( *u );
-			_users[ u->uid ] = *u;
+			_users[ u->uid ] = u;
 			
 			char* buf = new char[ _maxBytes ];
 			sock->async_receive( boost::asio::buffer( buf, _maxBytes ), boost::bind( &WebSocket::_async_read, this, u, buf, _1, _2 ) );
@@ -143,10 +154,11 @@ namespace libwebsock
 	
 	void WebSocket::_async_broadcast( const std::string& message )
 	{
-		std::map< int, User >::iterator user = _users.begin( );
+		std::map< int, usr_ptr >::iterator user = _users.begin( );
 		while( user != _users.end( ) )
 		{
-			_async_send( usr_ptr( new User( user->second ) ), message );
+			std::cout << "broadcasting to user: " << user->first << std::endl;
+			_async_send( user->second, message );
 			
 			++user;
 		}
