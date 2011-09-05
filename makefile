@@ -7,16 +7,16 @@ _boost := /usr/lib/boost_1_44_0
 all : libwebsock.a
 
 chatbot : all
-	g++ -g -I${_boost} chatbot.cpp libwebsock.a -L${_boost}/stage/lib -lboost_system -lboost_thread -o chatbot
+	g++ -g  chatbot.cpp libwebsock.a -lboost_system -lboost_thread -lssl -o chatbot
 	
 libwebsock.a : websock.o handshake.o md5.o
 	ar rcs libwebsock.a md5.o Handshake.o WebSocket.o
 
 websock.o : ${_websock}
-	g++ -g -I${_boost} WebSocket.cpp -c
+	g++ -g WebSocket.cpp -c
 
 handshake.o : ${_handshake}
-	g++ -g -I${_boost} Handshake.cpp -c
+	g++ -g  Handshake.cpp -c
 
 md5.o : ${_md5}
 	g++ -g ./md5/md5.cpp -c
