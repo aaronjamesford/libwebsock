@@ -1,13 +1,49 @@
 #include <string>
+
 #include <boost/algorithm/string/trim.hpp>
 
 #include <iostream>
+#include <sstream>
+
+#include <cstdio>
+
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
 
 #include "Handshake.h"
 #include "md5/md5.h"
 
 namespace libwebsock
 {
+	namespace
+	{
+		char *base64(const unsigned char *input, int length)
+		{
+		  BIO *bmem, *b64;
+		  BUF_MEM *bptr;
+
+		  b64 = BIO_new(BIO_f_base64());
+		  bmem = BIO_new(BIO_s_mem());
+		  b64 = BIO_push(b64, bmem);
+		  BIO_write(b64, input, length);
+		  BIO_flush(b64);
+		  BIO_get_mem_ptr(b64, &bptr);
+
+		  char *buff = (char *)malloc(bptr->length);
+		  memcpy(buff, bptr->data, bptr->length-1);
+		  buff[bptr->length-1] = 0;
+
+		  BIO_free_all(b64);
+
+		  return buff;
+		}	
+	}
+	
+	const std::string Handshake::_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	
 	Handshake::Handshake( )
 	{
 		/*
@@ -39,45 +75,38 @@ namespace libwebsock
 		
 		// TODO : Probably add some more
 		
-		// get key 1
-		_key1 = _getField( header, "Sec-WebSocket-Key1" );
-		boost::algorithm::trim( _key1 );
-		
-		// get key2
-		_key2 = _getField( header, "Sec-WebSocket-Key2" );
-		boost::algorithm::trim( _key2 );
-		
-		// the last 8 bytes is easy peasy
-		_l8b = header.substr( header.length( ) - 8 );
-		if( _l8b.length( ) != 8 )
+		// get the protocol version
+		std::stringstream ss_version( boost::algorithm::trim_copy( _getField( header, "Sec-WebSocket-Version" ) ) );
+		if( ss_version )
 		{
-			std::cout << "\n\n\nWTF NOT 8\n\n\n";
+			ss_version >> _version;
+		}
+		else
+		{
+			_version = 0;
 		}
 		
 		// TODO : validate all the fields gathered so far
 		
-		// get the secret :)
-		std::string secret = _genSecret( );
-		
 		// construct the response
 		// probably needs some more validation as some of these are optional and some may depend on static values
 		std::string response = "";
-		//response += char( 0x00 );
-		response += "HTTP/1.1 101 WebSocket Protocol Handshake\r\n";
-		response += "Upgrade: WebSocket\r\nConnection: Upgrade\r\n";
-		response += "Sec-WebSocket-Origin: " + _origin + "\r\n";
-		response += "Sec-WebSocket-Location: ws://" + _host + _path + "\r\n";
+		
+		
+		response += "HTTP/1.1 101 ";
+		response += (_version >= 6) ? "Switching Protocols" : "WebSocket Protocol Handshake";
+		response += "\r\n";
+		
+		response += "Upgrade: websocket\r\nConnection: Upgrade\r\n";
+		// response += "Sec-WebSocket-Origin: " + _origin + "\r\n";
+		// response += "Sec-WebSocket-Location: ws://" + _host + _path + "\r\n";
 		// response += "Sec-WebSocket-Protocol: " + _protocol + "\r\n";
-		response += 0x0D;
-		response += 0x0A;
-		response += secret;
+		response += (_version >= 6) ? _genAccept( header ) + "\r\n\r\n" : _genSecret( header );
+		
+		// std::cout << "Handshake version: " << _version;
+		
 		
 		_handshake = response;
-		
-		if( secret.length() != 16 )
-		{
-			std::cout << "\n\n\nOH NOES, Secret Length is ILLIN' - " << secret.length( ) << "\n\n\n";
-		}
 		
 		// place holder
 		return true;
@@ -124,15 +153,46 @@ namespace libwebsock
 		
 		return "";
 	}
-
-	std::string Handshake::_genSecret( )
+	
+	std::string Handshake::_genAccept( const std::string& header )
 	{
+		_key = _getField( header, "Sec-WebSocket-Key" );
+		boost::algorithm::trim( _key );
+		
+		std::string tosha( _key + _magic );
+		unsigned char shad[ 20 ];
+		SHA1( (unsigned char*)tosha.c_str( ), tosha.length( ), shad );
+		
+		std::string secret( base64( shad, 20 ) );
+		std::cout << "Secret: " << secret << std::endl;
+		
+		return "Sec-WebSocket-Accept: " + boost::algorithm::trim_copy( secret );
+	}
+
+	std::string Handshake::_genSecret( const std::string& header )
+	{
+		// get key 1
+		_key1 = _getField( header, "Sec-WebSocket-Key1" );
+		boost::algorithm::trim( _key1 );
+		
+		// get key2
+		_key2 = _getField( header, "Sec-WebSocket-Key2" );
+		boost::algorithm::trim( _key2 );
+		
+		// the last 8 bytes is easy peasy
+		_l8b = header.substr( header.length( ) - 8 );
+		
 		int k1 = _extractKey( _key1 );
 		int k2 = _extractKey( _key2 );
 		
 		std::string k( _getBigEndRep( k1 ) + _getBigEndRep( k2 ) + _l8b );
 		
-		return md5( k , true );
+		std::string response = "";
+		response += 0x0D;
+		response += 0x0A;
+		response += md5( k , true );
+		
+		return response;
 	}
 
 	int Handshake::_extractKey( const std::string& token )
