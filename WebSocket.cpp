@@ -12,6 +12,8 @@
 #include "WebSocket.h"
 #include "Handshake.h"
 
+#include "Frame.h"
+
 namespace libwebsock
 {
 
@@ -51,7 +53,31 @@ namespace libwebsock
 				bool foundframe = true;
 				int framecount = 0;
 				
-				while( foundframe )
+				Frame f( (unsigned char*)request, bytes_transferred );
+				if( f.disconnect( ) )
+				{
+					_disconnect( u );
+					delete[ ] request;
+					
+					return;
+				}
+				else
+				{
+					std::cout << "Data: " << f.data( ) << std::endl;
+					
+					std::string response;
+					std::string req = f.data( );
+					process( req, response );
+					
+					unsigned char* frame;
+					size_t b = Frame::createFrame( response, frame, true );
+					
+					_async_send( u, std::string( (char*)frame, b ) );
+					
+					delete[ ] frame;
+				}
+				
+				/* while( foundframe )
 				{
 					end = start + 1;
 					foundframe = false;
@@ -119,9 +145,9 @@ namespace libwebsock
 					}
 					
 					start = end + 1;
-				}
+				} */
 				
-				std::cout << "Frames in request: " << framecount << std::endl;
+				// std::cout << "Frames in request: " << framecount << std::endl;
 			}
 			else
 			{// lets shake hands, mr client
@@ -202,7 +228,7 @@ namespace libwebsock
 	{
 		if( u->handshaken )
 		{
-			_pad( resp );
+			// _pad( resp );
 		}
 		
 		if( u->sock->is_open( ) )
@@ -218,6 +244,10 @@ namespace libwebsock
 		if( error )
 		{
 			std::cout << "Error sending to client: " << error.message( ) << "\n\n\n";
+		}
+		else
+		{
+			std::cout << "Sensing COMPLETE" << std::endl;
 		}
 	}
 	
