@@ -235,7 +235,7 @@ namespace libwebsock
 		{
 			str_ptr r( new std::string( resp ) );
 			
-			u->sock->async_send( boost::asio::buffer( (unsigned char*)r->c_str( ), r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
+			boost::asio::async_write( *(u->sock), boost::asio::buffer( (unsigned char*)r->c_str( ), r->length( ) ), boost::bind( &WebSocket::_async_sent, this, r, _1, _2 ) );
 		}
 	}
 	
