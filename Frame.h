@@ -35,7 +35,7 @@ namespace libwebsock
 		bool _maskflag;
 	
 		unsigned char _payloadlen;
-		unsigned int _payloadlen1;
+		unsigned short _payloadlen1;
 		unsigned long long _payloadlen2;
 	
 		unsigned int _mask;

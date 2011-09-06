@@ -113,15 +113,24 @@ namespace libwebsock
 			datastart += 4;
 		}
 		
-		// I have no idea what to do if the payloadlen is either 126 or 127 inregards of the interpereting length...
+		// This is nly a guess :S
+		unsigned long long ourpayloadlen = _payloadlen;
 		if( _payloadlen == 126 )
 		{
 			datastart += 2;
+			
+			unsigned char* payloadptr = (unsigned char*)&_payloadlen1;
+			unsigned char* payloadstart = frame + 2;
+			for( int i = 0; i < 2; i++ )
+			{
+				payloadptr[ i ] = payloadstart[ i ];
+			}
+			
+			ourpayloadlen = _payloadlen1;
 		}
-		else if( _payloadlen == 127 )
-		{
-			datastart += 8;
-		}
+		/**
+		 * - TODO: Add support for the 64bit lengths (unlikely to happen)
+		 */
 		else
 		{
 			int* _maskptr = (int*)(_rawframe + 2);
