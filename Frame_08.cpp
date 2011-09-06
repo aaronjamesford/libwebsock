@@ -84,13 +84,15 @@ namespace libwebsock
 		return size;
 	}
 	
-	void Frame_08::unpackFrame( unsigned char* rawdata, size_t size )
+	size_t Frame_08::unpackFrame( unsigned char* rawdata, size_t size )
 	{
 		// return new Frame_08( rawdata, size );
 		_rawframe = rawdata;
-		_size = size;
+		// _size = size;
 		
 		_extract( );
+		
+		return _size;
 	}
 	
 	Frame_08::Frame_08( unsigned char* rawframe, size_t size )
@@ -114,9 +116,12 @@ namespace libwebsock
 		_payloadlen = _rawframe[ 1 ] & (unsigned char)0x7F;
 		
 		size_t datastart = 2;
+		
+		_size = 2; // garanteed 2 bytes of data
 		if( _maskflag )
 		{
 			datastart += 4;
+			_size += 4;
 		}
 		
 		// This is nly a guess :S
@@ -124,6 +129,7 @@ namespace libwebsock
 		if( _payloadlen == 126 )
 		{
 			datastart += 2;
+			_size += 2;
 			
 			unsigned char* payloadptr = (unsigned char*)&_payloadlen1;
 			unsigned char* payloadstart = _rawframe + 2;
@@ -144,8 +150,8 @@ namespace libwebsock
 		}
 		
 		unsigned char* data = _rawframe + datastart;
-		_rawdata = new unsigned char[ _payloadlen ];
-		for( int i = 0; i < _payloadlen; i++ )
+		_rawdata = new unsigned char[ ourpayloadlen ];
+		for( int i = 0; i < ourpayloadlen; i++ )
 		{
 			_rawdata[ i ] = data[ i ];
 		}
@@ -154,6 +160,8 @@ namespace libwebsock
 		{
 			_unmask( );
 		}
+		
+		_size += ourpayloadlen;
 	}
 	
 	void Frame_08::_unmask( )

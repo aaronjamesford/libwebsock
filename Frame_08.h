@@ -11,7 +11,7 @@ namespace libwebsock
 	{
 	public:
 		size_t packFrame( std::string data, unsigned char*& frame, const bool maskit = false );
-		void unpackFrame( unsigned char* rawdata, size_t size );
+		size_t unpackFrame( unsigned char* rawdata, size_t size );
 		static void mask( unsigned char* unmasked, unsigned int mask, size_t payloadlen, unsigned char* masked );
 	
 		Frame_08( unsigned char* rawframe, size_t size );

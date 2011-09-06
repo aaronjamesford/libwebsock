@@ -49,13 +49,10 @@ namespace libwebsock
 			if( u->handshaken )
 			{ // bitch has handshaken. Lets process him :)
 				size_t start = 0;
-				size_t end = 0;
-				bool foundframe = true;
-				int framecount = 0;
+				size_t offset = 0;
 				
-				// Frame_08 f( (unsigned char*)request, bytes_transferred );
-				// Frame* f = new Frame_08( (unsigned char*)request, bytes_transferred );
-				u->ftype->unpackFrame( (unsigned char*)request, bytes_transferred );
+				while( offset < bytes_transferred )
+				offset += u->ftype->unpackFrame( (unsigned char*)(request + offset), bytes_transferred - offset );
 				if( u->ftype->disconnect( ) )
 				{
 					_disconnect( u );
@@ -69,85 +66,24 @@ namespace libwebsock
 					
 					std::string response;
 					std::string req = u->ftype->data( );
-					process( req, response );
 					
-					unsigned char* frame;
-					size_t b = u->ftype->packFrame( response, frame, true );
+					size_t b;
+					switch( process( req, response ) )
+					{
+					case RESPOND:
+						unsigned char* frame;
+						b = u->ftype->packFrame( response, frame, false );
+						_async_send( u, std::string( (char*)frame, b ) );
+						delete[ ] frame;
 					
-					_async_send( u, std::string( (char*)frame, b ) );
-					
-					delete[ ] frame;
+						break;
+					case BROADCAST:
+						_async_broadcast( response );
+						break;
+					default:
+						break;
+					}
 				}
-				
-				/* while( foundframe )
-				{
-					end = start + 1;
-					foundframe = false;
-					
-					while( !foundframe && end < bytes_transferred )
-					{
-						if( (request[ start ] == 0x00 && (unsigned char)request[ end ] == (unsigned char)0xFF) 
-							|| ((unsigned char)request[ start ] == (unsigned char)0xFF && request[ end ] == 0x00) )
-						{
-							foundframe = true;
-							framecount ++;
-						}
-						else
-						{
-							end++;
-						}
-					}
-					
-					if( foundframe )
-					{
-						if( request[ start ] == 0x00 && (unsigned char)request[ end ] == (unsigned char)0xFF )
-						{
-							// trim the string
-							std::string req( request + start + 1, (end - start) - 1 );
-							std::string response;
-							
-							// process and take appropiate action
-							switch( process( req, response ) )
-							{
-							case NO_RESPOND:
-								break;
-							case RESPOND:
-								_async_send( u, response );
-								break;
-							case BROADCAST:
-								std::cout << "Broadcast\n\n";
-								_async_broadcast( response );
-								break;
-							default:
-								std::cout << "Error\n\n";
-								break;
-							}
-						}
-						else if( (unsigned char)request[ start ] == (unsigned char)0xFF && request[ end ] == 0x00 )
-						{ // client has usked us to close connection
-							// u->sock->close( );
-							
-							std::cout << "Request from client " << u->uid << " to close the connection." << std::endl;
-							
-							_disconnect( u );
-							delete[ ] request;
-							
-							return;
-						}
-						else
-						{
-							std::cout << "Unknown command: \n";
-							for( int i = 0; i < bytes_transferred; i++ )
-							{
-								printf( "0x%2X ", (unsigned char)request[ i ] );
-							}
-							
-							std::cout << std::endl;
-						}
-					}
-					
-					start = end + 1;
-				} */
 				
 				// std::cout << "Frames in request: " << framecount << std::endl;
 			}
@@ -221,7 +157,13 @@ namespace libwebsock
 		while( user != _users.end( ) )
 		{
 			std::cout << "broadcasting to user: " << user->first << std::endl;
-			_async_send( user->second, message );
+			
+			unsigned char* frame;
+			
+			size_t size = user->second->ftype->packFrame( message, frame, true );
+			_async_send( user->second, std::string( (char*)frame, size ) );
+			
+			delete[ ] frame;
 			
 			++user;
 		}
@@ -229,11 +171,6 @@ namespace libwebsock
 	
 	void WebSocket::_async_send( usr_ptr u, std::string resp )
 	{
-		if( u->handshaken )
-		{
-			// _pad( resp );
-		}
-		
 		if( u->sock->is_open( ) )
 		{
 			str_ptr r( new std::string( resp ) );
@@ -247,6 +184,10 @@ namespace libwebsock
 		if( error )
 		{
 			std::cout << "Error sending to client: " << error.message( ) << "\n\n\n";
+		}
+		else
+		{
+			std::cout << "Sent " << bytes_transferred << " bytes\n";
 		}
 	}
 	

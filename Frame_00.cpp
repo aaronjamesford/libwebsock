@@ -22,7 +22,7 @@ namespace libwebsock
 		return size;
 	}
 	
-	void Frame_00::unpackFrame( unsigned char* rawdata, size_t size )
+	size_t Frame_00::unpackFrame( unsigned char* rawdata, size_t size )
 	{
 		int end = 1;
 		bool foundframe = false;
@@ -33,18 +33,19 @@ namespace libwebsock
 			{
 				_data = std::string( (char*)rawdata + 1, end - 1 );
 				_disconnect = false;
-				return;
+				return end + 1;
 			}
 			else if( rawdata[ 0 ] == (unsigned char)0xFF && rawdata[ end ] == 0x00)
 			{
 				_disconnect = true;
-				return;
+				return 0;
 			}
 			
 			end++;
 		}
 		
 		_disconnect = true;
+		return 0;
 	}
 	
 	Frame_00::Frame_00( unsigned char* rawdata, size_t size )
