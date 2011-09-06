@@ -12,7 +12,7 @@
 #include "WebSocket.h"
 #include "Handshake.h"
 
-#include "Frame.h"
+#include "Frame_08.h"
 
 namespace libwebsock
 {
@@ -53,8 +53,9 @@ namespace libwebsock
 				bool foundframe = true;
 				int framecount = 0;
 				
-				Frame f( (unsigned char*)request, bytes_transferred );
-				if( f.disconnect( ) )
+				// Frame_08 f( (unsigned char*)request, bytes_transferred );
+				Frame* f = new Frame_08( (unsigned char*)request, bytes_transferred );
+				if( f->disconnect( ) )
 				{
 					_disconnect( u );
 					delete[ ] request;
@@ -63,14 +64,14 @@ namespace libwebsock
 				}
 				else
 				{
-					std::cout << "Data: " << f.data( ) << std::endl;
+					std::cout << "Data: " << f->data( ) << std::endl;
 					
 					std::string response;
-					std::string req = f.data( );
+					std::string req = f->data( );
 					process( req, response );
 					
 					unsigned char* frame;
-					size_t b = Frame::createFrame( response, frame, true );
+					size_t b = f->packFrame( response, frame, true );
 					
 					_async_send( u, std::string( (char*)frame, b ) );
 					

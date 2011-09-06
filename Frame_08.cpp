@@ -1,11 +1,11 @@
-#include "Frame.h"
+#include "Frame_08.h"
 
 #include <string>
 #include <cstdlib>
 
 namespace libwebsock
 {
-	size_t Frame::createFrame( std::string data, unsigned char*& frame, const bool maskit )
+	size_t Frame_08::packFrame( std::string data, unsigned char*& frame, const bool maskit )
 	{
 		// + 2 for the required header, any additional will be added later
 		size_t size = data.length( ) + 2;
@@ -84,15 +84,21 @@ namespace libwebsock
 		return size;
 	}
 	
-	Frame::Frame( unsigned char* rawframe, size_t size )
+	void Frame_08::unpackFrame( unsigned char* rawdata, size_t size )
 	{
-		_rawframe = rawframe;
+		// return new Frame_08( rawdata, size );
+		_rawframe = rawdata;
 		_size = size;
 		
 		_extract( );
 	}
+	
+	Frame_08::Frame_08( unsigned char* rawframe, size_t size )
+	{
+		unpackFrame( rawframe, size );
+	}
 		
-	void Frame::_extract( )
+	void Frame_08::_extract( )
 	{
 		_finflag = _rawframe[ 0 ] & (unsigned char)0x80;
 		
@@ -120,7 +126,7 @@ namespace libwebsock
 			datastart += 2;
 			
 			unsigned char* payloadptr = (unsigned char*)&_payloadlen1;
-			unsigned char* payloadstart = frame + 2;
+			unsigned char* payloadstart = _rawframe + 2;
 			for( int i = 0; i < 2; i++ )
 			{
 				payloadptr[ i ] = payloadstart[ i ];
@@ -150,15 +156,15 @@ namespace libwebsock
 		}
 	}
 	
-	void Frame::_unmask( )
+	void Frame_08::_unmask( )
 	{
 		unsigned char* unmasked = new unsigned char[ _payloadlen ];
 		mask( _rawdata, _mask, _payloadlen, unmasked );
 		
-		_unmaskdata = std::string( (char*)unmasked, _payloadlen );
+		_data = std::string( (char*)unmasked, _payloadlen );
 	}
 	
-	void Frame::mask( unsigned char* unmasked, unsigned int mask, size_t payloadlen, unsigned char* masked )
+	void Frame_08::mask( unsigned char* unmasked, unsigned int mask, size_t payloadlen, unsigned char* masked )
 	{
 		unsigned char* maskptr = (unsigned char*)&mask;
 		
