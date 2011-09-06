@@ -16,6 +16,10 @@
 #include "Handshake.h"
 #include "md5/md5.h"
 
+#include "Frame.h"
+#include "Frame_00.h"
+#include "Frame_08.h"
+
 namespace libwebsock
 {
 	namespace
@@ -115,6 +119,16 @@ namespace libwebsock
 	std::string Handshake::getHandshake( )
 	{
 		return _handshake;
+	}
+	
+	Frame* Handshake::getFrameType( )
+	{
+		if( _version >= 6 )
+		{
+			return new Frame_08( );
+		}
+		
+		return new Frame_00( );
 	}
 	
 	std::string Handshake::_getField( const std::string& header, const std::string& field )

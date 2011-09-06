@@ -5,12 +5,15 @@
 
 namespace libwebsock
 {
+	class Frame;
 	class Handshake
 	{
 	public:
 		Handshake( );
 		bool processHandshake( std::string& header );
 		std::string getHandshake( );
+	
+		Frame* getFrameType( );
 	private:
 		std::string _handshake;
 	
