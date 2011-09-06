@@ -10,12 +10,14 @@
 
 namespace libwebsock
 {
+	class Frame;
 
 	using boost::asio::ip::tcp;
 	typedef boost::shared_ptr< tcp::socket > sock_ptr;
 	typedef boost::shared_ptr< tcp::acceptor > accept_ptr;
 	typedef boost::shared_ptr< std::string > str_ptr;
 	typedef boost::shared_ptr< class User > usr_ptr;
+	typedef boost::shared_ptr< Frame > frame_ptr;
 	
 	struct User
 	{
@@ -24,6 +26,7 @@ namespace libwebsock
 		// to provide status on the handshake
 		bool handshaken;
 		int uid;
+		frame_ptr ftype;
 		
 		User( )
 		{

@@ -54,8 +54,9 @@ namespace libwebsock
 				int framecount = 0;
 				
 				// Frame_08 f( (unsigned char*)request, bytes_transferred );
-				Frame* f = new Frame_08( (unsigned char*)request, bytes_transferred );
-				if( f->disconnect( ) )
+				// Frame* f = new Frame_08( (unsigned char*)request, bytes_transferred );
+				u->ftype->unpackFrame( (unsigned char*)request, bytes_transferred );
+				if( u->ftype->disconnect( ) )
 				{
 					_disconnect( u );
 					delete[ ] request;
@@ -64,14 +65,14 @@ namespace libwebsock
 				}
 				else
 				{
-					std::cout << "Data: " << f->data( ) << std::endl;
+					std::cout << "Data: " << u->ftype->data( ) << std::endl;
 					
 					std::string response;
-					std::string req = f->data( );
+					std::string req = u->ftype->data( );
 					process( req, response );
 					
 					unsigned char* frame;
-					size_t b = f->packFrame( response, frame, true );
+					size_t b = u->ftype->packFrame( response, frame, true );
 					
 					_async_send( u, std::string( (char*)frame, b ) );
 					
@@ -206,6 +207,7 @@ namespace libwebsock
 			_async_send( u, h.getHandshake( ) );
 			
 			u->handshaken = true;
+			u->ftype = frame_ptr( h.getFrameType( ) );
 		}
 		else
 		{
@@ -245,10 +247,6 @@ namespace libwebsock
 		if( error )
 		{
 			std::cout << "Error sending to client: " << error.message( ) << "\n\n\n";
-		}
-		else
-		{
-			std::cout << "Sensing COMPLETE" << std::endl;
 		}
 	}
 	
