@@ -8,6 +8,8 @@
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "Logger.h"
+
 namespace libwebsock
 {
 	class Frame;
@@ -49,6 +51,8 @@ namespace libwebsock
 	protected:
 		virtual ResponseType process( std::string& request, std::string& response );
 		void broadcast( std::string message );
+		
+		inline void log( const std::string& message ) { _logger->log( message ); }
 	private:
 		boost::asio::io_service& _io_service;
 		accept_ptr _server_sock;
@@ -73,6 +77,8 @@ namespace libwebsock
 		void _pad( std::string& message );
 	
 		void _disconnect( usr_ptr u );
+		
+		Logger* _logger;
 	};
 
 }

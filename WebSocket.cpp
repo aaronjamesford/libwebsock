@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstdio>
 
+#include <cstdlib>
+
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
@@ -12,7 +14,9 @@
 #include "WebSocket.h"
 #include "Handshake.h"
 
-#include "Frame_08.h"
+#include "Frame.h"
+
+#include "Logger.h"
 
 namespace libwebsock
 {
@@ -21,6 +25,7 @@ namespace libwebsock
 		: _io_service( io_service ), _port( port ), _maxBytes( 2048 )
 	{
 		_current_id = 0;
+		_logger = Logger::getInstance( );
 	}
 	
 	void WebSocket::start( )
@@ -62,8 +67,6 @@ namespace libwebsock
 				}
 				else
 				{
-					std::cout << "Data: " << u->ftype->data( ) << std::endl;
-					
 					std::string response;
 					std::string req = u->ftype->data( );
 					
