@@ -62,6 +62,7 @@ namespace libwebsock
 		{
 			_version = 0;
 		}
+		log( "Protocol Version: " + itoa( _version ) );
 		
 		// TODO : validate all the fields gathered so far
 		
@@ -75,12 +76,22 @@ namespace libwebsock
 		response += "\r\n";
 		
 		response += "Upgrade: websocket\r\nConnection: Upgrade\r\n";
-		// response += "Sec-WebSocket-Origin: " + _origin + "\r\n";
-		// response += "Sec-WebSocket-Location: ws://" + _host + _path + "\r\n";
-		// response += "Sec-WebSocket-Protocol: " + _protocol + "\r\n";
-		response += (_version >= 6) ? _genAccept( header ) + "\r\n\r\n" : _genSecret( header );
+		if( _origin != "" )
+		{
+			response += "Sec-WebSocket-Origin: " + _origin + "\r\n";
+		}
 		
-		// std::cout << "Handshake version: " << _version;
+		if( _host != "" && _path != "" )
+		{
+			response += "Sec-WebSocket-Location: ws://" + _host + _path + "\r\n";
+		}
+		
+		if( _protocol != "" )
+		{
+			response += "Sec-WebSocket-Protocol: " + _protocol + "\r\n";
+		}
+		
+		response += (_version >= 6) ? _genAccept( header ) + "\r\n\r\n" : _genSecret( header );
 		
 		
 		_handshake = response;
@@ -151,7 +162,6 @@ namespace libwebsock
 		SHA1( (unsigned char*)tosha.c_str( ), tosha.length( ), shad );
 		
 		std::string secret( base64( shad, 20 ) );
-		std::cout << "Secret: " << secret << std::endl;
 		
 		return "Sec-WebSocket-Accept: " + boost::algorithm::trim_copy( secret );
 	}
