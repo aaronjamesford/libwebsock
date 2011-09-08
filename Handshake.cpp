@@ -2,7 +2,6 @@
 
 #include <boost/algorithm/string/trim.hpp>
 
-#include <iostream>
 #include <sstream>
 
 #include <cstdio>
