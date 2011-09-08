@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
@@ -14,17 +15,11 @@ namespace libwebsock
 {
 	std::string itoa( int x )
 	{
-		std::string res = "";
+		std::stringstream ss;
 		
-		while( x != 0 )
-		{
-			res += (x % 10) - '0';
-			x = x / 10;
-		}
+		ss << x;
 		
-		std::reverse( res.begin( ), res.end( ) );
-		
-		return res;
+		return ss.str( );
 	}
 	
 	char *base64(const unsigned char *input, int length)
