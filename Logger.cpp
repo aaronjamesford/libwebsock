@@ -25,6 +25,10 @@ namespace libwebsock
 		
 		time( &currenttime );
 		
-		std::cout << "[" << ctime( &currenttime ) << "] " << message << std::endl;
+		char* str_time = ctime( &currenttime );
+		std::string returnless_time( str_time );
+		returnless_time = returnless_time.substr( 0, returnless_time.length( ) - 1 );
+		
+		std::cout << "[" << returnless_time << "] " << message << std::endl;
 	}
 }
