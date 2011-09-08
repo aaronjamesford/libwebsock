@@ -7,6 +7,8 @@
 
 namespace libwebsock
 {
+	Logger* Logger::_inst = 0;
+	
 	Logger* Logger::getInstance( )
 	{
 		if( !_inst )
