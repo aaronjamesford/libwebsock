@@ -3,7 +3,7 @@
 
 namespace libwebsock
 {
-	std::string atoi( int x );
+	std::string itoa( int x );
 	char *base64(const unsigned char *input, int length);
 }
 

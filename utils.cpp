@@ -12,7 +12,7 @@
 
 namespace libwebsock
 {
-	std::string atoi( int x )
+	std::string itoa( int x )
 	{
 		std::string res = "";
 		
