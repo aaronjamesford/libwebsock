@@ -1,9 +1,5 @@
 #include <string>
 #include <map>
-#include <iostream>
-#include <cstdio>
-
-#include <cstdlib>
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/shared_ptr.hpp>
@@ -15,8 +11,8 @@
 #include "Handshake.h"
 
 #include "Frame.h"
-
 #include "Logger.h"
+#include "utils.h"
 
 namespace libwebsock
 {
@@ -60,6 +56,8 @@ namespace libwebsock
 				offset += u->ftype->unpackFrame( (unsigned char*)(request + offset), bytes_transferred - offset );
 				if( u->ftype->disconnect( ) )
 				{
+					log( "Request from client " + itoa( u->uid ) + " to disconnect" );
+					
 					_disconnect( u );
 					delete[ ] request;
 					
@@ -92,7 +90,7 @@ namespace libwebsock
 			}
 			else
 			{// lets shake hands, mr client
-				std::cout << "Handshaking with client " << u->uid << std::endl;
+				log( "Handshaking with client " + itoa( u->uid ) );
 				_handshake( u, std::string( request, bytes_transferred ) );
 			}
 		
@@ -103,14 +101,14 @@ namespace libwebsock
 		{
 			delete[ ] request;
 			
-			std::cout << "Client " << u->uid << " closed the connection." << std::endl;
+			log( "Client " + itoa( u->uid ) + " closed the connection (eof)." );
 			// u->sock->close( );
 			_disconnect( u );
 		}
 		else
 		{
 			delete[ ] request;
-			std::cout << "Error: " << error.message( ) << std::endl;
+			log( "Error: " + error.message( ) );
 		}
 	}
 	
@@ -124,7 +122,7 @@ namespace libwebsock
 			u->uid = _current_id++;
 			u->handshaken = false;
 			
-			std::cout << "New connection, giving id of " << u->uid << std::endl;
+			log( "New connection, giving id of " + itoa( u->uid ) );
 			
 			// _users.push_back( *u );
 			_users[ u->uid ] = u;
@@ -150,7 +148,7 @@ namespace libwebsock
 		}
 		else
 		{
-			std::cout << "Handshake fail with client " << u->uid << std::endl;
+			log( "Handshake fail with client " + itoa( u->uid ) );
 		}
 	}
 	
@@ -159,7 +157,7 @@ namespace libwebsock
 		std::map< int, usr_ptr >::iterator user = _users.begin( );
 		while( user != _users.end( ) )
 		{
-			std::cout << "broadcasting to user: " << user->first << std::endl;
+			log( "Broadcasting to user: " + itoa( user->first ) );
 			
 			unsigned char* frame;
 			
@@ -186,11 +184,11 @@ namespace libwebsock
 	{
 		if( error )
 		{
-			std::cout << "Error sending to client: " << error.message( ) << "\n\n\n";
+			log( "Error sending to client: " + error.message( ) );
 		}
 		else
 		{
-			std::cout << "Sent " << bytes_transferred << " bytes\n";
+			log( "Sent " + itoa( bytes_transferred ) + " bytes" );
 		}
 	}
 	
@@ -206,7 +204,6 @@ namespace libwebsock
 	
 	void WebSocket::_disconnect( usr_ptr u )
 	{
-		std::cout << "Disconnection with client " << u->uid << std::endl;
 		u->sock->close( );
 		_users.erase( u->uid );
 	}
