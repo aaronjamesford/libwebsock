@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "Logger.h"
+
 namespace libwebsock
 {
 	class Frame;
@@ -14,6 +16,8 @@ namespace libwebsock
 		std::string getHandshake( );
 	
 		Frame* getFrameType( );
+	
+		inline void log( const std::string& m ) { _logger->log( m ); }
 	private:
 		std::string _handshake;
 	
@@ -43,6 +47,8 @@ namespace libwebsock
 		
 		int _extractKey( const std::string& token );
 		std::string _getBigEndRep( int x );
+		
+		Logger* _logger;
 	};
 }
 

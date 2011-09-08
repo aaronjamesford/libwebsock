@@ -17,6 +17,7 @@
 #include "Frame_08.h"
 
 #include "utils.h"
+#include "Logger.h"
 
 namespace libwebsock
 {
@@ -24,9 +25,7 @@ namespace libwebsock
 	
 	Handshake::Handshake( )
 	{
-		/*
-		 -- Empty implementation
-		*/
+		_logger = Logger::getInstance( );
 	}
 	
 	bool Handshake::processHandshake( std::string& header )
