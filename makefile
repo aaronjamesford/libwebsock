@@ -1,4 +1,5 @@
 _websock := WebSocket.cpp WebSocket.h
+_processable := Processable.h Processable.cpp
 _handshake := Handshake.h Handshake.cpp
 _frame_08 := Frame_08.h Frame_08.cpp
 _frame_00 := Frame_00.h Frame_00.cpp
@@ -16,6 +17,9 @@ chatbot : all
 libwebsock.a : Websock.o Handshake.o md5.o Frame_08.o Frame_00.o Logger.o utils.o
 	ar rcs libwebsock.a md5.o Handshake.o WebSocket.o Frame_08.o Frame_00.o Logger.o utils.o
 	
+Processable.o : ${_processable}
+	g++ -g Processable.cpp -c
+
 utils.o : ${_utils}
 	g++ -g utils.cpp -c
 	

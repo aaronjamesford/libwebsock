@@ -13,6 +13,7 @@
 namespace libwebsock
 {
 	class Frame;
+	class Processable;
 
 	using boost::asio::ip::tcp;
 	typedef boost::shared_ptr< tcp::socket > sock_ptr;
@@ -35,26 +36,22 @@ namespace libwebsock
 			handshaken = false;
 		}
 	};
-	
-	enum ResponseType
-	{
-		NO_RESPOND, RESPOND, BROADCAST
-	};
 
 	class WebSocket
 	{
 	public:
-		WebSocket( boost::asio::io_service& io_service, int port );
+		WebSocket( int port );
 		~WebSocket( ) { };
 			
 		void start( );
+		void start( Processable* p );
 	protected:
-		virtual ResponseType process( std::string& request, std::string& response );
+		// virtual ResponseType process( std::string& request, std::string& response );
 		void broadcast( std::string message );
 		
 		inline void log( const std::string& message ) { _logger->log( message ); }
 	private:
-		boost::asio::io_service& _io_service;
+		boost::asio::io_service _io_service;
 		accept_ptr _server_sock;
 		
 		int _port;
@@ -79,6 +76,8 @@ namespace libwebsock
 		void _disconnect( usr_ptr u );
 		
 		Logger* _logger;
+		
+		Processable* _processable;
 	};
 
 }

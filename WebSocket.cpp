@@ -13,12 +13,13 @@
 #include "Frame.h"
 #include "Logger.h"
 #include "utils.h"
+#include "Processable.h"
 
 namespace libwebsock
 {
 
-	WebSocket::WebSocket( boost::asio::io_service& io_service, int port )
-		: _io_service( io_service ), _port( port ), _maxBytes( 2048 )
+	WebSocket::WebSocket( int port )
+		: _io_service( ), _port( port ), _maxBytes( 2048 )
 	{
 		_current_id = 0;
 		_logger = Logger::getInstance( );
@@ -26,6 +27,13 @@ namespace libwebsock
 	
 	void WebSocket::start( )
 	{
+		start( new Processable( ) );
+	}
+	
+	void WebSocket::start( Processable* p )
+	{
+		_processable = p;
+		
 		_server_sock = accept_ptr( new tcp::acceptor( _io_service ) );
 		tcp::endpoint ep( tcp::v4( ), _port );
 		
@@ -41,6 +49,8 @@ namespace libwebsock
 		
 		sock_ptr s( new tcp::socket( _io_service ) );
 		_server_sock->async_accept( *s, boost::bind( &WebSocket::_async_accept, this, s, boost::asio::placeholders::error ) );
+		
+		_io_service.run( );
 	}
 	
 	void WebSocket::_async_read( usr_ptr u, char* request, const boost::system::error_code& error, size_t bytes_transferred )
@@ -69,7 +79,7 @@ namespace libwebsock
 					std::string req = u->ftype->data( );
 					
 					size_t b;
-					switch( process( req, response ) )
+					switch( _processable->process( req, response ) )
 					{
 					case RESPOND:
 						unsigned char* frame;
@@ -208,10 +218,10 @@ namespace libwebsock
 		_users.erase( u->uid );
 	}
 	
-	ResponseType WebSocket::process( std::string& request, std::string& response )
+	/* ResponseType WebSocket::process( std::string& request, std::string& response )
 	{
 		response = request;
 		
 		return RESPOND;
-	}
+	} */
 }
